@@ -1,11 +1,15 @@
 # app/routers/auth.py
 
+from datetime import timedelta
+
 from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
     status,
 )
+
+from fastapi.security import HTTPBearer
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -26,8 +30,9 @@ from app.core.security import (
     ALGORITHM,
 )
 
-from fastapi.security import HTTPBearer
-
+# =========================================
+# Router
+# =========================================
 
 router = APIRouter(
     prefix="/auth",
@@ -36,9 +41,8 @@ router = APIRouter(
 
 security = HTTPBearer()
 
-
 # =========================================
-# current user dependency
+# Current User Dependency
 # =========================================
 
 def get_current_user(
@@ -73,7 +77,6 @@ def get_current_user(
             detail="Invalid token"
         )
 
-
 # =========================================
 # Apple Sign In
 # =========================================
@@ -87,10 +90,11 @@ async def apple_login(
     TODO:
     Apple identity token verify
 
-    MVPでは仮subを使用
+    MVP:
+    identity_token を仮subとして利用
     """
 
-    apple_sub = "temporary_sub"
+    apple_sub = req.identity_token
 
     db: Session = SessionLocal()
 
@@ -101,7 +105,7 @@ async def apple_login(
     user = db.scalar(stmt)
 
     # =====================================
-    # create user
+    # Create User
     # =====================================
 
     if not user:
@@ -117,7 +121,7 @@ async def apple_login(
         db.refresh(user)
 
     # =====================================
-    # create jwt
+    # Create Access Token
     # =====================================
 
     access_token = create_access_token(
@@ -129,9 +133,8 @@ async def apple_login(
         "user_id": user.id,
     }
 
-
 # =========================================
-# current user
+# Current User
 # =========================================
 
 @router.get("/me")
@@ -159,4 +162,43 @@ async def me(
         "email": user.email,
         "apple_sub": user.apple_sub,
         "created_at": user.created_at,
+    }
+
+# =========================================
+# Refresh Token
+# =========================================
+
+@router.post("/refresh")
+async def refresh_token(
+    user_id=Depends(get_current_user)
+):
+
+    """
+    MVP:
+    access token 再発行
+    """
+
+    new_token = create_access_token(
+        user_id
+    )
+
+    return {
+        "access_token": new_token
+    }
+
+# =========================================
+# Logout
+# =========================================
+
+@router.post("/logout")
+async def logout():
+
+    """
+    MVP:
+    stateless JWT のため
+    client側で token delete
+    """
+
+    return {
+        "message": "Logged out"
     }
