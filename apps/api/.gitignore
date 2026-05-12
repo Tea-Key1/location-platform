@@ -1,3 +1,22 @@
 # pixi environments
 .pixi/*
 !.pixi/config.toml
+
+# Python
+__pycache__/
+*.pyc
+
+# SQLite
+*.db
+
+# Env
+.env
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+
+# logs
+*.log

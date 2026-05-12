@@ -1,14 +1,24 @@
 [workspace]
-authors = ["Tea-Key1 <ingethu2@gmail.com>"]
-channels = ["conda-forge"]
-name = "api"
-platforms = ["win-64"]
+name = "location-platform-api"
 version = "0.1.0"
-
-[tasks]
+channels = ["conda-forge"]
+platforms = ["win-64"]
 
 [dependencies]
-fastapi = ">=0.136.1,<0.137"
-uvicorn = ">=0.46.0,<0.47"
-sqlalchemy = ">=2.0.49,<3"
-psycopg = ">=3.3.4,<4"
+python = "3.13.*"
+fastapi = "*"
+uvicorn = "*"
+sqlalchemy = "*"
+numpy = "*"
+s2sphere = "*"
+psycopg = "*"
+python-jose = ">=3.5.0,<4"
+cryptography = ">=48.0.0,<49"
+passlib = ">=1.7.4,<2"
+bcrypt = ">=5.0.0,<6"
+python-multipart = ">=0.0.28,<0.0.29"
+pyjwt = ">=2.12.1,<3"
+httpx = ">=0.28.1,<0.29"
+
+[tasks]
+api = "uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"

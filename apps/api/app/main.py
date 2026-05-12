@@ -3,13 +3,22 @@ from fastapi import FastAPI
 from app.db.database import Base, engine
 from app.models.location import Location
 from app.routers.location import router as location_router
+from app.routers.auth import (
+    router as auth_router
+)
+from app.routers.profile import (
+    router as profile_router
+)
+
+
 
 app = FastAPI()
 
 Base.metadata.create_all(bind=engine)
 
 app.include_router(location_router)
-
+app.include_router(auth_router)
+app.include_router(profile_router)
 
 @app.get("/")
 async def root():

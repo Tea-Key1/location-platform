@@ -1,4 +1,11 @@
 fastapi
 uvicorn[standard]
 sqlalchemy
-psycopg
+numpy
+s2sphere
+psycopg[binary]
+
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+httpx
