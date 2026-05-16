@@ -162,6 +162,8 @@ async def me(
         "email": user.email,
         "apple_sub": user.apple_sub,
         "created_at": user.created_at,
+        "home_lat": user.home_lat,
+        "home_lng": user.home_lng,
     }
 
 # =========================================

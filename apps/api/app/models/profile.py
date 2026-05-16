@@ -1,11 +1,7 @@
-# app/models/profile.py
-
-from datetime import datetime
-
 from sqlalchemy import (
     ForeignKey,
+    Float,
     String,
-    DateTime,
 )
 
 from sqlalchemy.orm import (
@@ -27,18 +23,55 @@ class Profile(Base):
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id"),
         unique=True,
-        index=True,
     )
 
-    age_group: Mapped[str]
+    # =====================================
+    # demographics
+    # =====================================
 
+    age_group: Mapped[str | None]
     gender: Mapped[str | None]
 
-    lifestyle: Mapped[str | None]
+    # =====================================
+    # semantic personality
+    # =====================================
 
-    home_city: Mapped[str | None]
+    calm: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=datetime.utcnow,
+    vivid: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
+
+    roamer: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
+
+    luxury: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
+
+    nature: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
+
+    nightlife: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
+
+    local: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
+
+    creative: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
     )
