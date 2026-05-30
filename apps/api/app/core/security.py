@@ -1,17 +1,18 @@
-# core/security.py
+from datetime import datetime, timedelta, timezone
 
-from datetime import datetime, timedelta
 from jose import jwt
 
-SECRET_KEY = "CHANGE_THIS"
-ALGORITHM = "HS256"
+from app.core.config import (
+    SECRET_KEY,
+    ALGORITHM,
+    ACCESS_TOKEN_EXPIRE_DAYS,
+)
 
 
-def create_access_token(
-    user_id: int
-):
-
-    expire = datetime.utcnow() + timedelta(days=7)
+def create_access_token(user_id: int) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(
+        days=ACCESS_TOKEN_EXPIRE_DAYS
+    )
 
     payload = {
         "sub": str(user_id),
@@ -21,5 +22,5 @@ def create_access_token(
     return jwt.encode(
         payload,
         SECRET_KEY,
-        algorithm=ALGORITHM
+        algorithm=ALGORITHM,
     )

@@ -1,15 +1,12 @@
-from datetime import datetime
-
 from sqlalchemy import (
+    Column,
+    Integer,
     String,
-    DateTime,
     Float,
+    DateTime,
 )
 
-from sqlalchemy.orm import (
-    Mapped,
-    mapped_column,
-)
+from datetime import datetime, timezone
 
 from app.db.database import Base
 
@@ -18,46 +15,43 @@ class User(Base):
 
     __tablename__ = "users"
 
-    id: Mapped[int] = mapped_column(
-        primary_key=True
-    )
-
-    # =====================================
-    # auth
-    # =====================================
-
-    apple_sub: Mapped[str] = mapped_column(
-        String,
-        unique=True,
+    id = Column(
+        Integer,
+        primary_key=True,
         index=True,
     )
 
-    email: Mapped[str | None]
-
-    # =====================================
-    # semantic home
-    # =====================================
-
-    home_lat: Mapped[float | None] = mapped_column(
-        Float,
-        nullable=True,
+    apple_sub = Column(
+        String,
+        unique=True,
+        nullable=False,
+        index=True,
     )
 
-    home_lng: Mapped[float | None] = mapped_column(
-        Float,
-        nullable=True,
-    )
-
-    home_parent_s2_id: Mapped[str | None] = mapped_column(
+    email = Column(
         String,
         nullable=True,
     )
 
-    # =====================================
-    # timestamps
-    # =====================================
+    # semantic home
+    home_lat = Column(
+        Float,
+        nullable=True,
+    )
 
-    created_at: Mapped[datetime] = mapped_column(
+    home_lng = Column(
+        Float,
+        nullable=True,
+    )
+
+    home_parent_s2_id = Column(
+        String,
+        nullable=True,
+        index=True,
+    )
+
+    created_at = Column(
         DateTime,
-        default=datetime.utcnow,
+        default=lambda:
+            datetime.now(timezone.utc)
     )

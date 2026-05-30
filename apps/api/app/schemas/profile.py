@@ -1,50 +1,30 @@
-# app/schemas/profile.py
-
 from pydantic import BaseModel
-
-
-# =====================================================
-# onboarding
-# =====================================================
-
-from pydantic import BaseModel
+from typing import Optional
 
 
 class ProfileCreateRequest(BaseModel):
 
-    # =====================================
-    # demographics
-    # =====================================
+    # demographic
+    age_group: Optional[str] = None
+    gender: Optional[str] = None
 
-    age_group: str | None = None
-    gender: str | None = None
-
-    # =====================================
     # semantic home
-    # =====================================
-
     home_lat: float
     home_lng: float
 
-    # =====================================
-    # personality
-    # =====================================
+    # personality vector
+    calm: float = 0.0
+    vivid: float = 0.0
+    roamer: float = 0.0
 
-    calm: float | None = None
-    vivid: float | None = None
-    roamer: float | None = None
-    luxury: float | None = None
-    nature: float | None = None
-    nightlife: float | None = None
-    local: float | None = None
-    creative: float | None = None
+    luxury: float = 0.0
+    nature: float = 0.0
+    nightlife: float = 0.0
 
+    local: float = 0.0
+    creative: float = 0.0
 
-# =====================================================
-# update semantic home
-# =====================================================
 
 class UpdateHomeRequest(BaseModel):
-
     home_lat: float
     home_lng: float

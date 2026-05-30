@@ -1,12 +1,9 @@
 from sqlalchemy import (
-    ForeignKey,
+    Column,
+    Integer,
     Float,
     String,
-)
-
-from sqlalchemy.orm import (
-    Mapped,
-    mapped_column,
+    ForeignKey,
 )
 
 from app.db.database import Base
@@ -16,62 +13,67 @@ class Profile(Base):
 
     __tablename__ = "profiles"
 
-    id: Mapped[int] = mapped_column(
-        primary_key=True
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
     )
 
-    user_id: Mapped[int] = mapped_column(
+    user_id = Column(
+        Integer,
         ForeignKey("users.id"),
+        nullable=False,
         unique=True,
     )
 
-    # =====================================
-    # demographics
-    # =====================================
-
-    age_group: Mapped[str | None]
-    gender: Mapped[str | None]
-
-    # =====================================
-    # semantic personality
-    # =====================================
-
-    calm: Mapped[float | None] = mapped_column(
-        Float,
+    # demographic
+    age_group = Column(
+        String,
         nullable=True,
     )
 
-    vivid: Mapped[float | None] = mapped_column(
-        Float,
+    gender = Column(
+        String,
         nullable=True,
     )
 
-    roamer: Mapped[float | None] = mapped_column(
+    # personality vector
+    calm = Column(
         Float,
-        nullable=True,
+        default=0.0,
     )
 
-    luxury: Mapped[float | None] = mapped_column(
+    vivid = Column(
         Float,
-        nullable=True,
+        default=0.0,
     )
 
-    nature: Mapped[float | None] = mapped_column(
+    roamer = Column(
         Float,
-        nullable=True,
+        default=0.0,
     )
 
-    nightlife: Mapped[float | None] = mapped_column(
+    luxury = Column(
         Float,
-        nullable=True,
+        default=0.0,
     )
 
-    local: Mapped[float | None] = mapped_column(
+    nature = Column(
         Float,
-        nullable=True,
+        default=0.0,
     )
 
-    creative: Mapped[float | None] = mapped_column(
+    nightlife = Column(
         Float,
-        nullable=True,
+        default=0.0,
+    )
+
+    local = Column(
+        Float,
+        default=0.0,
+    )
+
+    creative = Column(
+        Float,
+        default=0.0,
     )

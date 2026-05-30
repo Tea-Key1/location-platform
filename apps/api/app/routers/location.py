@@ -1,26 +1,31 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.database import SessionLocal
+from app.core.auth import get_current_user
+from app.db.database import get_db
 from app.models.location import Location
 from app.schemas.location import (
     LocationRequest,
     SimilarityRequest,
-    SimilaritySearchRequest
+    SimilaritySearchRequest,
 )
 from app.services.similarity import (
     calculate_similarity,
-    search_similar_locations
+    search_similar_locations,
 )
 
-router = APIRouter()
+router = APIRouter(
+    tags=["locations"],
+)
 
 
 @router.post("/locations")
-async def create_location(location: LocationRequest):
-    db: Session = SessionLocal()
-
+async def create_location(
+    location: LocationRequest,
+    user_id: int = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     db_location = Location(
         lat=location.lat,
         lng=location.lng,
@@ -34,13 +39,37 @@ async def create_location(location: LocationRequest):
     return {
         "status": "saved",
         "id": db_location.id,
+        "user_id": user_id,
     }
+
+
+@router.get("/locations")
+async def get_locations(
+    user_id: int = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    stmt = select(Location).order_by(
+        Location.created_at.desc()
+    )
+
+    locations = db.scalars(stmt).all()
+
+    return [
+        {
+            "id": loc.id,
+            "lat": loc.lat,
+            "lng": loc.lng,
+            "accuracy": loc.accuracy,
+            "created_at": loc.created_at,
+        }
+        for loc in locations
+    ]
+
 
 @router.post("/similarity")
 async def similarity(
-    req: SimilarityRequest
+    req: SimilarityRequest,
 ):
-
     score = calculate_similarity(
         req.home_lat,
         req.home_lng,
@@ -57,27 +86,11 @@ async def similarity(
         "similarity": score
     }
 
-@router.get("/locations")
-async def get_locations():
-    db: Session = SessionLocal()
-
-    stmt = select(Location).order_by(Location.created_at.desc())
-
-    locations = db.scalars(stmt).all()
-
-    return [
-        {
-            "id": loc.id,
-            "lat": loc.lat,
-            "lng": loc.lng,
-            "accuracy": loc.accuracy,
-            "created_at": loc.created_at,
-        }
-        for loc in locations
-    ]
 
 @router.post("/similarity/search")
-async def search_similarity(req: SimilaritySearchRequest):
+async def search_similarity(
+    req: SimilaritySearchRequest,
+):
     results = search_similar_locations(
         home_lat=req.home_lat,
         home_lng=req.home_lng,

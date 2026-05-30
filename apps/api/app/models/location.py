@@ -1,18 +1,12 @@
-# app/models/location.py
-
-from datetime import datetime
-
 from sqlalchemy import (
-    DateTime,
-    Float,
+    Column,
     Integer,
+    Float,
     String,
+    DateTime,
 )
 
-from sqlalchemy.orm import (
-    Mapped,
-    mapped_column,
-)
+from datetime import datetime, timezone
 
 from app.db.database import Base
 
@@ -21,53 +15,50 @@ class Location(Base):
 
     __tablename__ = "locations"
 
-    id: Mapped[int] = mapped_column(
-        primary_key=True
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
     )
 
-    # =====================================
-    # raw gps
-    # =====================================
-
-    lat: Mapped[float] = mapped_column(
-        Float
+    lat = Column(
+        Float,
+        nullable=False,
     )
 
-    lng: Mapped[float] = mapped_column(
-        Float
+    lng = Column(
+        Float,
+        nullable=False,
     )
 
-    accuracy: Mapped[float | None]
-
-    # =====================================
-    # semantic
-    # =====================================
-
-    similarity: Mapped[float | None] = mapped_column(
+    accuracy = Column(
         Float,
         nullable=True,
     )
 
-    parent_s2_id: Mapped[str | None] = mapped_column(
+    similarity = Column(
+        Float,
+        nullable=True,
+    )
+
+    parent_s2_id = Column(
+        String,
+        nullable=True,
+        index=True,
+    )
+
+    prefecture = Column(
         String,
         nullable=True,
     )
 
-    prefecture: Mapped[str | None] = mapped_column(
+    city_name = Column(
         String,
         nullable=True,
     )
 
-    city_name: Mapped[str | None] = mapped_column(
-        String,
-        nullable=True,
-    )
-
-    # =====================================
-    # timestamp
-    # =====================================
-
-    created_at: Mapped[datetime] = mapped_column(
+    created_at = Column(
         DateTime,
-        default=datetime.utcnow,
+        default=lambda:
+            datetime.now(timezone.utc)
     )
