@@ -1,14 +1,19 @@
-from pydantic import BaseModel
-from typing import Optional
+# app/schemas/profile.py
 
+from pydantic import BaseModel
+
+
+# =========================================
+# onboarding profile
+# =========================================
 
 class ProfileCreateRequest(BaseModel):
 
-    # demographic
-    age_group: Optional[str] = None
-    gender: Optional[str] = None
+    # basic
+    age_group: str
+    gender: str
 
-    # semantic home
+    # home
     home_lat: float
     home_lng: float
 
@@ -25,6 +30,12 @@ class ProfileCreateRequest(BaseModel):
     creative: float = 0.0
 
 
+# =========================================
+# update home
+# =========================================
+
 class UpdateHomeRequest(BaseModel):
+
     home_lat: float
     home_lng: float
+
