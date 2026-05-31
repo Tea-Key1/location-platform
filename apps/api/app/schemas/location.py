@@ -1,5 +1,3 @@
-# app/schemas/location.py
-
 # =========================================
 # app/schemas/location.py
 # =========================================
@@ -7,6 +5,7 @@
 from datetime import datetime
 
 from pydantic import BaseModel
+
 
 # =========================================
 # CREATE
@@ -19,6 +18,7 @@ class LocationCreate(BaseModel):
     lng: float
 
     accuracy: float | None = None
+
 
 # =========================================
 # ITEM
@@ -35,6 +35,7 @@ class LocationItem(BaseModel):
     accuracy: float | None = None
 
     created_at: datetime
+
 
 # =========================================
 # LIST RESPONSE

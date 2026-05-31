@@ -77,17 +77,18 @@ async def get_locations(
     }
 
 # =========================================
-# POST LOCATION
+# CREATE LOCATION
 # =========================================
 
 @router.post(
-    ""
+    "",
+
+    response_model=
+    LocationItem
 )
 async def create_location(
 
     payload: LocationCreate,
-
-    db: Session = Depends(get_db),
 
     current_user: User = Depends(
         get_current_user
@@ -96,11 +97,15 @@ async def create_location(
 
     return {
 
-        "success": True,
+        "id": "loc_1",
 
         "lat": payload.lat,
 
         "lng": payload.lng,
 
-        "accuracy": payload.accuracy,
+        "accuracy":
+            payload.accuracy,
+
+        "created_at":
+            datetime.utcnow()
     }

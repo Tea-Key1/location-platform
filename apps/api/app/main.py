@@ -39,6 +39,10 @@ from app.routers.profile import (
     router as profile_router
 )
 
+from app.routers.health import (
+    router as health_router
+)
+
 from app.routers.similarity import (
     router as similarity_router
 )
@@ -135,6 +139,10 @@ app.include_router(
 
 app.include_router(
     profile_router
+)
+
+app.include_router(
+    health_router
 )
 
 app.include_router(

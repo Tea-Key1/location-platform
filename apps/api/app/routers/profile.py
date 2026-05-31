@@ -6,7 +6,13 @@ from fastapi import HTTPException
 
 from sqlalchemy.orm import Session
 
-from app.db.database import SessionLocal
+from app.db.database import (
+    SessionLocal
+)
+
+from app.db.database import (
+    get_db
+)
 
 from app.dependencies.auth import (
     get_current_user
@@ -16,11 +22,12 @@ from app.models.user import User
 from app.models.profile import Profile
 
 from app.schemas.profile import (
+    ProfileResponse,
+    HomeLocationRequest,
+    HomeLocationResponse,
     OnboardingRequest,
     OnboardingResponse,
-    ProfileResponse,
     ProfileCompletionResponse,
-    HomeLocationRequest,
 )
 
 from app.schemas.common import (
@@ -32,25 +39,37 @@ router = APIRouter(
     tags=["profiles"],
 )
 
+# =========================================
+# ONBOARDING
+# =========================================
 
 @router.post(
     "/onboarding",
     response_model=OnboardingResponse,
 )
 def onboarding(
-    body: OnboardingRequest,
-    user: User = Depends(get_current_user),
-):
 
-    db: Session = SessionLocal()
+    body: OnboardingRequest,
+
+    user: User = Depends(
+        get_current_user
+    ),
+
+    db: Session = Depends(get_db),
+):
 
     profile = (
         db.query(Profile)
-        .filter(Profile.user_id == user.id)
+        .filter(
+            Profile.user_id == user.id
+        )
         .first()
     )
 
-    # upsert
+    # =====================================
+    # UPSERT
+    # =====================================
+
     if not profile:
 
         profile = Profile(
@@ -59,11 +78,23 @@ def onboarding(
 
         db.add(profile)
 
+    # =====================================
+    # BASIC
+    # =====================================
+
     profile.age_group = body.age_group
     profile.gender = body.gender
 
+    # =====================================
+    # HOME
+    # =====================================
+
     profile.home_lat = body.home_lat
     profile.home_lng = body.home_lng
+
+    # =====================================
+    # PERSONALITY
+    # =====================================
 
     profile.calm = body.calm
     profile.vivid = body.vivid
@@ -79,17 +110,25 @@ def onboarding(
     db.refresh(profile)
 
     return {
+
         "profile_completed": True,
+
         "profile": profile,
     }
 
+# =========================================
+# GET ME
+# =========================================
 
 @router.get(
     "/me",
     response_model=ProfileResponse,
 )
 def get_me(
-    user: User = Depends(get_current_user),
+
+    user: User = Depends(
+        get_current_user
+    ),
 ):
 
     if not user.profile:
@@ -101,37 +140,106 @@ def get_me(
 
     return user.profile
 
+# =========================================
+# COMPLETION
+# =========================================
 
 @router.get(
     "/completion",
     response_model=ProfileCompletionResponse,
 )
 def completion(
-    user: User = Depends(get_current_user),
+
+    user: User = Depends(
+        get_current_user
+    ),
 ):
 
+    completed = (
+
+        user.profile is not None
+
+        and user.profile.age_group is not None
+
+        and user.profile.gender is not None
+
+        and user.profile.home_lat is not None
+
+        and user.profile.home_lng is not None
+    )
+
     return {
-        "profile_completed":
-            user.profile is not None
+
+        "profile_completed": completed
     }
 
+# =========================================
+# UPDATE HOME
+# =========================================
+
+@router.post(
+    "/home",
+    response_model=HomeLocationResponse,
+)
+def update_home(
+
+    body: HomeLocationRequest,
+
+    current_user: User = Depends(
+        get_current_user
+    ),
+
+    db: Session = Depends(get_db),
+):
+
+    profile = current_user.profile
+
+    if not profile:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Profile not found"
+        )
+
+    profile.home_lat = body.home_lat
+    profile.home_lng = body.home_lng
+
+    db.commit()
+    db.refresh(profile)
+
+    return {
+
+        "profile_completed": True,
+
+        "profile": profile,
+    }
+
+# =========================================
+# DELETE PROFILE
+# =========================================
 
 @router.delete(
     "/me",
-    response_model=DeleteResponse
+    response_model=DeleteResponse,
 )
-def delete_profile():
+def delete_profile(
 
-    return {
-        "deleted": True
-    }
+    current_user: User = Depends(
+        get_current_user
+    ),
 
-@router.post("/home")
-def update_home_location(
-    body: HomeLocationRequest
+    db: Session = Depends(get_db),
 ):
 
+    profile = current_user.profile
+
+    if profile:
+
+        db.delete(profile)
+
+        db.commit()
+
     return {
-        "home_lat": body.home_lat,
-        "home_lng": body.home_lng,
+
+        "deleted": True
     }
