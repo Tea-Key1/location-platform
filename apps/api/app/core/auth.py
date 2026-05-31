@@ -7,7 +7,7 @@ from app.core.config import SECRET_KEY, ALGORITHM
 security = HTTPBearer()
 
 
-def get_current_user(credentials=Depends(security)) -> int:
+def get_current_user(credentials=Depends(security)) -> str:
     token = credentials.credentials
 
     try:
@@ -25,7 +25,7 @@ def get_current_user(credentials=Depends(security)) -> int:
                 detail="Invalid token",
             )
 
-        return int(user_id)
+        return user_id
 
     except JWTError:
         raise HTTPException(

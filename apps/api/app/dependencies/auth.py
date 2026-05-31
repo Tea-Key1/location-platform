@@ -34,9 +34,9 @@ def get_current_user(
             algorithms=[ALGORITHM]
         )
 
-        user_id = payload.get("sub")
+        apple_sub = payload.get("sub")
 
-        if user_id is None:
+        if apple_sub is None:
 
             raise HTTPException(
                 status_code=401,
@@ -47,7 +47,7 @@ def get_current_user(
 
         user = (
             db.query(User)
-            .filter(User.id == int(user_id))
+            .filter(User.apple_sub == apple_sub)
             .first()
         )
 

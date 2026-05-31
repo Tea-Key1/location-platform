@@ -6,6 +6,8 @@ from sqlalchemy import (
     ForeignKey,
 )
 
+from sqlalchemy.orm import relationship
+
 from app.db.database import Base
 
 
@@ -34,6 +36,16 @@ class Profile(Base):
 
     gender = Column(
         String,
+        nullable=True,
+    )
+
+    home_lat = Column(
+        Float,
+        nullable=True,
+    )
+
+    home_lng = Column(
+        Float,
         nullable=True,
     )
 
@@ -76,4 +88,9 @@ class Profile(Base):
     creative = Column(
         Float,
         default=0.0,
+    )
+
+    user = relationship(
+        "User",
+        back_populates="profile",
     )

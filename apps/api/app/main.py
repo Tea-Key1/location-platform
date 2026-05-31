@@ -21,6 +21,7 @@ from slowapi.middleware import (
 from app.db.database import (
     Base,
     engine,
+    ensure_sqlite_schema,
 )
 
 # =========================================
@@ -75,6 +76,8 @@ ENV = os.getenv(
 Base.metadata.create_all(
     bind=engine
 )
+
+ensure_sqlite_schema()
 
 # =========================================
 # APP

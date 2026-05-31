@@ -11,6 +11,8 @@ from sqlalchemy import (
 
 from datetime import datetime
 
+from sqlalchemy.orm import relationship
+
 from app.db.database import Base
 
 
@@ -132,4 +134,10 @@ class User(Base):
     created_at = Column(
         DateTime,
         default=datetime.utcnow
+    )
+
+    profile = relationship(
+        "Profile",
+        back_populates="user",
+        uselist=False,
     )
