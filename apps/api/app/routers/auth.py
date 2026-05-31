@@ -55,7 +55,11 @@ async def apple_login(
     )
 
     profile_completed = (
-        user.profile is not None
+        profile is not None
+        and profile.age_group is not None
+        and profile.gender is not None
+        and profile.home_lat is not None
+        and profile.home_lng is not None
     )
 
     return AppleLoginResponse(

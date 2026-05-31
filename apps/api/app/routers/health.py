@@ -1,20 +1,16 @@
 # app/routers/health.py
 
-from fastapi import APIRouter
 from sqlalchemy import text
 
-from app.db.database import SessionLocal
-
-router = APIRouter(
-    prefix="/health",
-    tags=["health"]
+from app.schemas.health import (
+    HealthResponse
 )
 
-
-@router.get("")
-def health():
-
-    db = SessionLocal()
+@app.get(
+    "/health",
+    response_model=HealthResponse
+)
+def health(db: Session = Depends(get_db)):
 
     try:
 
@@ -22,11 +18,11 @@ def health():
 
         db_status = "ok"
 
-    except:
+    except Exception:
 
         db_status = "error"
 
     return {
         "status": "ok",
-        "db": db_status,
+        "db": db_status
     }

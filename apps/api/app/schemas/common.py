@@ -7,6 +7,5 @@ class ErrorResponse(BaseModel):
     detail: str
 
 
-class HealthResponse(BaseModel):
-    status: str
-    db: str
+class DeleteResponse(BaseModel):
+    deleted: bool

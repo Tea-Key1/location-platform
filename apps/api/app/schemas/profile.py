@@ -69,3 +69,7 @@ class OnboardingResponse(BaseModel):
 
 class ProfileCompletionResponse(BaseModel):
     profile_completed: bool
+
+class HomeLocationRequest(BaseModel):
+    home_lat: float
+    home_lng: float

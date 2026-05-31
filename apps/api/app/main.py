@@ -1,4 +1,6 @@
+# =========================================
 # app/main.py
+# =========================================
 
 import os
 
@@ -8,10 +10,22 @@ from fastapi.middleware.cors import (
     CORSMiddleware
 )
 
+from slowapi.middleware import (
+    SlowAPIMiddleware
+)
+
+# =========================================
+# DB
+# =========================================
+
 from app.db.database import (
     Base,
     engine,
 )
+
+# =========================================
+# Routers
+# =========================================
 
 from app.routers.location import (
     router as location_router
@@ -25,6 +39,22 @@ from app.routers.profile import (
     router as profile_router
 )
 
+from app.routers.similarity import (
+    router as similarity_router
+)
+
+# =========================================
+# Middleware
+# =========================================
+
+from app.core.logging import (
+    LoggingMiddleware
+)
+
+from app.core.rate_limit import (
+    limiter
+)
+
 # =========================================
 # ENV
 # =========================================
@@ -35,7 +65,7 @@ ENV = os.getenv(
 )
 
 # =========================================
-# DB
+# DB CREATE
 # =========================================
 
 Base.metadata.create_all(
@@ -54,6 +84,24 @@ app = FastAPI(
     "GeoAI Personality Platform API",
 
     version="1.0.0",
+)
+
+# =========================================
+# RATE LIMIT
+# =========================================
+
+app.state.limiter = limiter
+
+app.add_middleware(
+    SlowAPIMiddleware
+)
+
+# =========================================
+# LOGGING
+# =========================================
+
+app.add_middleware(
+    LoggingMiddleware
 )
 
 # =========================================
@@ -77,11 +125,21 @@ app.add_middleware(
 # ROUTERS
 # =========================================
 
-app.include_router(location_router)
+app.include_router(
+    location_router
+)
 
-app.include_router(auth_router)
+app.include_router(
+    auth_router
+)
 
-app.include_router(profile_router)
+app.include_router(
+    profile_router
+)
+
+app.include_router(
+    similarity_router
+)
 
 # =========================================
 # ROOT
@@ -110,10 +168,24 @@ async def health():
     }
 
 # =========================================
-# STARTUP LOG
+# STARTUP EVENT
 # =========================================
 
-print("===================================")
-print("🚀 Roamie API starting...")
-print(f"🌎 ENV: {ENV}")
-print("===================================")
+@app.on_event("startup")
+async def startup_event():
+
+    print("===================================")
+    print("🚀 Roamie API starting...")
+    print(f"🌎 ENV: {ENV}")
+    print("===================================")
+
+# =========================================
+# SHUTDOWN EVENT
+# =========================================
+
+@app.on_event("shutdown")
+async def shutdown_event():
+
+    print("===================================")
+    print("🛑 Roamie API shutting down...")
+    print("===================================")

@@ -1,35 +1,28 @@
 # app/schemas/similarity.py
 
-from typing import List
 from pydantic import BaseModel
 
 
-class AreaInfo(BaseModel):
+class AreaResponse(BaseModel):
     prefecture: str | None = None
     city: str | None = None
     district: str | None = None
 
 
 class SimilarityResponse(BaseModel):
-
     similarity: float
-
-    home_area: AreaInfo
-
-    current_area: AreaInfo
+    home_area: AreaResponse
+    current_area: AreaResponse
 
 
-class SimilaritySearchItem(BaseModel):
-
+class SimilarPlaceItem(BaseModel):
     id: str
     name: str
-
-    similarity: float
-
     lat: float
     lng: float
+    similarity: float
+    area: AreaResponse
 
 
 class SimilaritySearchResponse(BaseModel):
-
-    items: List[SimilaritySearchItem]
+    items: list[SimilarPlaceItem]

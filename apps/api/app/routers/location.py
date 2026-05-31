@@ -1,106 +1,106 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy import select
+# =========================================
+# app/routers/location.py
+# =========================================
+
+from datetime import datetime
+
+from fastapi import (
+    APIRouter,
+    Depends,
+)
+
 from sqlalchemy.orm import Session
 
-from app.core.auth import get_current_user
-from app.db.database import get_db
-from app.models.location import Location
+from app.db.database import (
+    SessionLocal
+)
+
+from app.dependencies.auth import (
+    get_current_user
+)
+
+from app.models.user import User
+
 from app.schemas.location import (
-    LocationRequest,
-    SimilarityRequest,
-    SimilaritySearchRequest,
+    LocationCreate,
+    LocationItem,
+    LocationListResponse,
 )
-from app.services.similarity import (
-    calculate_similarity,
-    search_similar_locations,
-)
+
+# =========================================
+# Router
+# =========================================
 
 router = APIRouter(
-    tags=["locations"],
+
+    prefix="/locations",
+
+    tags=["locations"]
 )
 
+# =========================================
+# DB Dependency
+# =========================================
 
-@router.post("/locations")
-async def create_location(
-    location: LocationRequest,
-    user_id: int = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    db_location = Location(
-        lat=location.lat,
-        lng=location.lng,
-        accuracy=location.accuracy,
-    )
+def get_db():
 
-    db.add(db_location)
-    db.commit()
-    db.refresh(db_location)
+    db = SessionLocal()
 
-    return {
-        "status": "saved",
-        "id": db_location.id,
-        "user_id": user_id,
-    }
+    try:
 
+        yield db
 
-@router.get("/locations")
+    finally:
+
+        db.close()
+
+# =========================================
+# GET LOCATIONS
+# =========================================
+
+@router.get(
+    "",
+    response_model=LocationListResponse
+)
 async def get_locations(
-    user_id: int = Depends(get_current_user),
+
     db: Session = Depends(get_db),
-):
-    stmt = select(Location).order_by(
-        Location.created_at.desc()
+
+    current_user: User = Depends(
+        get_current_user
     )
-
-    locations = db.scalars(stmt).all()
-
-    return [
-        {
-            "id": loc.id,
-            "lat": loc.lat,
-            "lng": loc.lng,
-            "accuracy": loc.accuracy,
-            "created_at": loc.created_at,
-        }
-        for loc in locations
-    ]
-
-
-@router.post("/similarity")
-async def similarity(
-    req: SimilarityRequest,
 ):
-    score = calculate_similarity(
-        req.home_lat,
-        req.home_lng,
-        req.current_lat,
-        req.current_lng,
-    )
-
-    if score is None:
-        return {
-            "error": "embedding not found"
-        }
 
     return {
-        "similarity": score
+
+        "items": []
     }
 
+# =========================================
+# POST LOCATION
+# =========================================
 
-@router.post("/similarity/search")
-async def search_similarity(
-    req: SimilaritySearchRequest,
-):
-    results = search_similar_locations(
-        home_lat=req.home_lat,
-        home_lng=req.home_lng,
-        min_lat=req.min_lat,
-        max_lat=req.max_lat,
-        min_lng=req.min_lng,
-        max_lng=req.max_lng,
-        top_k=req.top_k,
+@router.post(
+    ""
+)
+async def create_location(
+
+    payload: LocationCreate,
+
+    db: Session = Depends(get_db),
+
+    current_user: User = Depends(
+        get_current_user
     )
+):
 
     return {
-        "results": results
+
+        "success": True,
+
+        "lat": payload.lat,
+
+        "lng": payload.lng,
+
+        "accuracy": payload.accuracy,
     }

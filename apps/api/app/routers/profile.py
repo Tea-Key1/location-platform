@@ -20,6 +20,11 @@ from app.schemas.profile import (
     OnboardingResponse,
     ProfileResponse,
     ProfileCompletionResponse,
+    HomeLocationRequest,
+)
+
+from app.schemas.common import (
+    DeleteResponse
 )
 
 router = APIRouter(
@@ -111,20 +116,22 @@ def completion(
     }
 
 
-@router.delete("/me")
-def reset_profile(
-    user: User = Depends(get_current_user),
-):
-
-    db: Session = SessionLocal()
-
-    profile = user.profile
-
-    if profile:
-
-        db.delete(profile)
-        db.commit()
+@router.delete(
+    "/me",
+    response_model=DeleteResponse
+)
+def delete_profile():
 
     return {
-        "success": True
+        "deleted": True
+    }
+
+@router.post("/home")
+def update_home_location(
+    body: HomeLocationRequest
+):
+
+    return {
+        "home_lat": body.home_lat,
+        "home_lng": body.home_lng,
     }

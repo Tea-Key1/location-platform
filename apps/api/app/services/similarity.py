@@ -1,322 +1,93 @@
-# app/services/similarity.py
+from fastapi import APIRouter
 
-from pathlib import Path
-
-import numpy as np
-import pandas as pd
-
-from sklearn.metrics.pairwise import cosine_similarity
-
-from s2sphere import CellId, LatLng
-
-
-# =========================================================
-# CONFIG
-# =========================================================
-
-PATCH_EMBEDDING_PATH = Path(
-    "app/data/patch_embeddings.parquet"
+from app.services.s2cell import (
+    latlng_to_s2
 )
 
-PATCH_METADATA_PATH = Path(
-    "app/data/patch_metadata.parquet"
+from app.services.embedding_store import (
+    embedding_store
 )
 
-S2_LEVEL = 12
-
-
-# =========================================================
-# LOAD DATA
-# =========================================================
-
-print("📦 loading patch embeddings...")
-
-emb_df = pd.read_parquet(
-    PATCH_EMBEDDING_PATH
+from app.services.similarity import (
+    cosine_similarity
 )
 
-print("✅ embeddings:", emb_df.shape)
-
-print("📦 loading patch metadata...")
-
-meta_df = pd.read_parquet(
-    PATCH_METADATA_PATH
+from app.services.geocoder import (
+    reverse_geocode
 )
 
-print("✅ metadata:", meta_df.shape)
+router = APIRouter()
 
 
-# =========================================================
-# MERGE
-# =========================================================
+@router.post("/similarity")
+def similarity(req: dict):
 
-PATCH_DF = emb_df.merge(
-    meta_df[
-        [
-            "parent_s2_id",
-            "prefecture",
-            "city_name",
-            "city_code",
-            "lat",
-            "lng",
-        ]
-    ],
-    on="parent_s2_id",
-    how="left",
-)
+    home_lat = req["home_lat"]
+    home_lng = req["home_lng"]
 
-print("✅ merged:", PATCH_DF.shape)
+    current_lat = req["current_lat"]
+    current_lng = req["current_lng"]
 
+    # -------------------------
+    # S2
+    # -------------------------
 
-# =========================================================
-# EMBEDDING MATRIX
-# =========================================================
-
-EMBEDDING_COLS = sorted([
-    c
-    for c in PATCH_DF.columns
-    if c.startswith("emb_")
-])
-
-EMBEDDING_MATRIX = PATCH_DF[
-    EMBEDDING_COLS
-].values.astype(np.float32)
-
-print("✅ embedding matrix:", EMBEDDING_MATRIX.shape)
-
-
-# =========================================================
-# S2
-# =========================================================
-
-def latlng_to_parent(
-    lat: float,
-    lng: float,
-    level: int = S2_LEVEL,
-):
-
-    cell = CellId.from_lat_lng(
-        LatLng.from_degrees(lat, lng)
-    )
-
-    return cell.parent(level).id()
-
-
-# =========================================================
-# FIND EMBEDDING
-# =========================================================
-
-def find_embedding(
-    lat: float,
-    lng: float,
-):
-
-    parent_id = latlng_to_parent(
-        lat,
-        lng,
-    )
-
-    row = PATCH_DF[
-        PATCH_DF["parent_s2_id"] == parent_id
-    ]
-
-    # =====================================================
-    # exact match
-    # =====================================================
-
-    if len(row) > 0:
-
-        emb = row[
-            EMBEDDING_COLS
-        ].values[0]
-
-        return (
-            emb,
-            row.iloc[0].to_dict(),
-        )
-
-    # =====================================================
-    # fallback:
-    # nearest lat/lng
-    # =====================================================
-
-    coords = PATCH_DF[
-        ["lat", "lng"]
-    ].values
-
-    query = np.array([
-        lat,
-        lng,
-    ])
-
-    dist = np.linalg.norm(
-        coords - query,
-        axis=1,
-    )
-
-    idx = dist.argmin()
-
-    emb = EMBEDDING_MATRIX[idx]
-
-    return (
-        emb,
-        PATCH_DF.iloc[idx].to_dict(),
-    )
-
-
-# =========================================================
-# CALCULATE SIMILARITY
-# =========================================================
-
-def calculate_similarity(
-    home_lat: float,
-    home_lng: float,
-    current_lat: float,
-    current_lng: float,
-):
-
-    try:
-
-        home_emb, home_meta = find_embedding(
-            home_lat,
-            home_lng,
-        )
-
-        current_emb, current_meta = find_embedding(
-            current_lat,
-            current_lng,
-        )
-
-        sim = cosine_similarity(
-            home_emb.reshape(1, -1),
-            current_emb.reshape(1, -1),
-        )[0][0]
-
-        # =============================================
-        # -1~1 → -100~100
-        # =============================================
-
-        score = float(sim * 100.0)
-
-        # clamp
-        score = max(
-            -100.0,
-            min(100.0, score)
-        )
-
-        return round(score, 2)
-
-    except Exception as e:
-
-        print("similarity error:")
-        print(e)
-
-        return None
-
-
-# =========================================================
-# SEARCH SIMILAR LOCATIONS
-# =========================================================
-
-def clean_nan(v):
-
-    if pd.isna(v):
-        return None
-
-    return v
-
-def search_similar_locations(
-    home_lat: float,
-    home_lng: float,
-    min_lat: float,
-    max_lat: float,
-    min_lng: float,
-    max_lng: float,
-    top_k: int = 20,
-):
-
-    # =====================================================
-    # home embedding
-    # =====================================================
-
-    home_emb, home_meta = find_embedding(
+    home_s2 = latlng_to_s2(
         home_lat,
-        home_lng,
+        home_lng
     )
 
-    # =====================================================
-    # bounding box filter
-    # =====================================================
-
-    target = PATCH_DF[
-        (PATCH_DF["lat"] >= min_lat)
-        & (PATCH_DF["lat"] <= max_lat)
-        & (PATCH_DF["lng"] >= min_lng)
-        & (PATCH_DF["lng"] <= max_lng)
-    ].copy()
-
-    if len(target) == 0:
-        return []
-
-    target_embs = target[
-        EMBEDDING_COLS
-    ].values.astype(np.float32)
-
-    # =====================================================
-    # cosine similarity
-    # =====================================================
-
-    sims = cosine_similarity(
-        home_emb.reshape(1, -1),
-        target_embs,
-    )[0]
-
-    target["similarity"] = sims * 100.0
-
-    # =====================================================
-    # sort
-    # =====================================================
-
-    target = target.sort_values(
-        "similarity",
-        ascending=False,
+    current_s2 = latlng_to_s2(
+        current_lat,
+        current_lng
     )
 
-    target = target.head(top_k)
+    # -------------------------
+    # embedding
+    # -------------------------
 
-    # =====================================================
-    # output
-    # =====================================================
+    home_vec = embedding_store.get(
+        home_s2
+    )
 
-    results = []
+    current_vec = embedding_store.get(
+        current_s2
+    )
 
-    for _, row in target.iterrows():
+    # -------------------------
+    # similarity
+    # -------------------------
 
-        results.append({
+    sim = cosine_similarity(
+        home_vec,
+        current_vec
+    )
 
-            "similarity": round(
-                float(row["similarity"]),
-                2,
-            ),
+    # -------------------------
+    # reverse geocode
+    # -------------------------
 
-            "lat": float(row["lat"]),
-            "lng": float(row["lng"]),
+    home_geo = reverse_geocode(
+        home_lat,
+        home_lng
+    )
 
-            "prefecture": clean_nan(
-                row.get("prefecture")
-            ),
+    current_geo = reverse_geocode(
+        current_lat,
+        current_lng
+    )
 
-            "city_name": clean_nan(
-                row.get("city_name")
-            ),
+    return {
 
-            "city_code": clean_nan(
-                row.get("city_code")
-            ),
+        "home": {
+            "s2_id": home_s2,
+            "geo": home_geo,
+        },
 
-            "parent_s2_id": int(
-                row["parent_s2_id"]
-            ),
-        })
+        "current": {
+            "s2_id": current_s2,
+            "geo": current_geo,
+        },
 
-    return results
+        "similarity": sim
+    }

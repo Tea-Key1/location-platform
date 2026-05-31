@@ -1,28 +1,47 @@
+# app/schemas/location.py
+
+# =========================================
+# app/schemas/location.py
+# =========================================
+
+from datetime import datetime
+
 from pydantic import BaseModel
-from typing import Optional
 
+# =========================================
+# CREATE
+# =========================================
 
-class LocationRequest(BaseModel):
+class LocationCreate(BaseModel):
+
     lat: float
+
     lng: float
-    accuracy: Optional[float] = None
 
+    accuracy: float | None = None
 
-class SimilarityRequest(BaseModel):
-    home_lat: float
-    home_lng: float
-    current_lat: float
-    current_lng: float
+# =========================================
+# ITEM
+# =========================================
 
+class LocationItem(BaseModel):
 
-class SimilaritySearchRequest(BaseModel):
-    home_lat: float
-    home_lng: float
+    id: str
 
-    min_lat: float
-    max_lat: float
+    lat: float
 
-    min_lng: float
-    max_lng: float
+    lng: float
 
-    top_k: int = 10
+    accuracy: float | None = None
+
+    created_at: datetime
+
+# =========================================
+# LIST RESPONSE
+# =========================================
+
+class LocationListResponse(
+    BaseModel
+):
+
+    items: list[LocationItem]
