@@ -1,20 +1,16 @@
 # app/routers/auth.py
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException,
-)
-
+from fastapi import APIRouter
 from sqlalchemy.orm import Session
 
 from app.db.database import SessionLocal
 
-from app.models.user import User
-
 from app.schemas.auth import (
     AppleLoginRequest,
+    AppleLoginResponse,
 )
+
+from app.models.user import User
 
 from app.core.security import (
     create_access_token,
@@ -22,86 +18,48 @@ from app.core.security import (
 
 router = APIRouter(
     prefix="/auth",
-    tags=["auth"]
+    tags=["auth"],
 )
 
-# =========================================
-# DB
-# =========================================
 
-def get_db():
-
-    db = SessionLocal()
-
-    try:
-        yield db
-
-    finally:
-        db.close()
-
-# =========================================
-# Apple Login
-# =========================================
-
-@router.post("/apple")
-def apple_login(
-    body: AppleLoginRequest,
-    db: Session = Depends(get_db)
+@router.post(
+    "/apple",
+    response_model=AppleLoginResponse,
+)
+async def apple_login(
+    body: AppleLoginRequest
 ):
 
-    # =====================================
-    # Apple token
-    # MVP:
-    # identity_tokenをsub代わりに使う
-    # =====================================
+    db: Session = SessionLocal()
 
     apple_sub = body.identity_token
 
-    # =====================================
-    # existing user
-    # =====================================
-
-    user = db.query(User).filter(
-        User.apple_sub == apple_sub
-    ).first()
-
-    # =====================================
-    # new user
-    # =====================================
+    user = (
+        db.query(User)
+        .filter(User.apple_sub == apple_sub)
+        .first()
+    )
 
     if not user:
 
         user = User(
-            apple_sub=apple_sub,
-            profile_completed=False,
+            apple_sub=apple_sub
         )
 
         db.add(user)
-
         db.commit()
-
         db.refresh(user)
 
-    # =====================================
-    # JWT
-    # =====================================
-
-    access_token = create_access_token(
-        {
-            "user_id": user.id
-        }
+    token = create_access_token(
+        {"sub": str(user.id)}
     )
 
-    # =====================================
-    # response
-    # =====================================
+    profile_completed = (
+        user.profile is not None
+    )
 
-    return {
-
-        "access_token": access_token,
-
-        "token_type": "bearer",
-
-        "profile_completed":
-            user.profile_completed,
-    }
+    return AppleLoginResponse(
+        access_token=token,
+        token_type="bearer",
+        profile_completed=profile_completed,
+    )

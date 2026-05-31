@@ -1,41 +1,71 @@
 # app/schemas/profile.py
 
-from pydantic import BaseModel
+from typing import Literal
+from pydantic import BaseModel, Field
 
 
-# =========================================
-# onboarding profile
-# =========================================
+AgeGroup = Literal[
+    "10s",
+    "20s",
+    "30s",
+    "40s",
+    "50s",
+    "60s",
+    "70s+"
+]
 
-class ProfileCreateRequest(BaseModel):
+Gender = Literal[
+    "male",
+    "female",
+    "other"
+]
 
-    # basic
+
+class OnboardingRequest(BaseModel):
+
+    age_group: AgeGroup
+
+    gender: Gender
+
+    home_lat: float
+    home_lng: float
+
+    calm: float = Field(ge=0.0, le=1.0)
+    vivid: float = Field(ge=0.0, le=1.0)
+
+    roamer: float = Field(ge=0.0, le=1.0)
+    luxury: float = Field(ge=0.0, le=1.0)
+    nature: float = Field(ge=0.0, le=1.0)
+    nightlife: float = Field(ge=0.0, le=1.0)
+    local: float = Field(ge=0.0, le=1.0)
+    creative: float = Field(ge=0.0, le=1.0)
+
+
+class ProfileResponse(BaseModel):
+
     age_group: str
     gender: str
 
-    # home
     home_lat: float
     home_lng: float
 
-    # personality vector
-    calm: float = 0.0
-    vivid: float = 0.0
-    roamer: float = 0.0
+    calm: float
+    vivid: float
 
-    luxury: float = 0.0
-    nature: float = 0.0
-    nightlife: float = 0.0
-
-    local: float = 0.0
-    creative: float = 0.0
+    roamer: float
+    luxury: float
+    nature: float
+    nightlife: float
+    local: float
+    creative: float
 
 
-# =========================================
-# update home
-# =========================================
+class OnboardingResponse(BaseModel):
 
-class UpdateHomeRequest(BaseModel):
+    profile_completed: bool
 
-    home_lat: float
-    home_lng: float
+    profile: ProfileResponse
 
+
+class ProfileCompletionResponse(BaseModel):
+    profile_completed: bool
