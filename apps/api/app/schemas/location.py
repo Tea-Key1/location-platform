@@ -4,7 +4,7 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # =========================================
@@ -13,11 +13,13 @@ from pydantic import BaseModel
 
 class LocationCreate(BaseModel):
 
-    lat: float
+    lat: float = Field(ge=-90.0, le=90.0)
 
-    lng: float
+    lng: float = Field(ge=-180.0, le=180.0)
 
     accuracy: float | None = None
+
+    timestamp: datetime | None = None
 
 
 # =========================================
@@ -26,7 +28,9 @@ class LocationCreate(BaseModel):
 
 class LocationItem(BaseModel):
 
-    id: str
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
 
     lat: float
 
@@ -34,7 +38,15 @@ class LocationItem(BaseModel):
 
     accuracy: float | None = None
 
-    created_at: datetime
+    timestamp: datetime
+
+    s2_level12_id: str
+
+    prefecture: str | None = None
+
+    city: str | None = None
+
+    locality: str | None = None
 
 
 # =========================================

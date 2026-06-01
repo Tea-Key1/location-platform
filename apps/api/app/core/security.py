@@ -1,30 +1,18 @@
 # app/core/security.py
 
-import os
-
 from datetime import (
     datetime,
     timedelta,
+    timezone,
 )
 
 from jose import jwt
 
-
-# =========================================
-# ENV
-# =========================================
-
-SECRET_KEY = os.getenv(
-    "JWT_SECRET",
-    "dev-secret"
+from app.core.config import (
+    ACCESS_TOKEN_EXPIRE_DAYS,
+    ALGORITHM,
+    SECRET_KEY,
 )
-
-ALGORITHM = os.getenv(
-    "ALGORITHM",
-    "HS256"
-)
-
-ACCESS_TOKEN_EXPIRE_DAYS = 30
 
 
 # =========================================
@@ -32,17 +20,13 @@ ACCESS_TOKEN_EXPIRE_DAYS = 30
 # =========================================
 
 def create_access_token(
-    data: dict
+    data: dict,
+    expires_at: datetime | None = None,
 ):
 
     to_encode = data.copy()
 
-    expire = (
-        datetime.utcnow()
-        + timedelta(
-            days=ACCESS_TOKEN_EXPIRE_DAYS
-        )
-    )
+    expire = expires_at or get_access_token_expires_at()
 
     to_encode.update({
         "exp": expire
@@ -55,3 +39,18 @@ def create_access_token(
     )
 
     return encoded_jwt
+
+
+def utc_now():
+
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def get_access_token_expires_at():
+
+    return (
+        utc_now()
+        + timedelta(
+            days=ACCESS_TOKEN_EXPIRE_DAYS
+        )
+    )

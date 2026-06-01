@@ -7,10 +7,6 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.database import (
-    SessionLocal
-)
-
-from app.db.database import (
     get_db
 )
 
@@ -192,7 +188,11 @@ def update_home(
     db: Session = Depends(get_db),
 ):
 
-    profile = current_user.profile
+    profile = (
+        db.query(Profile)
+        .filter(Profile.user_id == current_user.id)
+        .first()
+    )
 
     if not profile:
 
@@ -231,7 +231,11 @@ def delete_profile(
     db: Session = Depends(get_db),
 ):
 
-    profile = current_user.profile
+    profile = (
+        db.query(Profile)
+        .filter(Profile.user_id == current_user.id)
+        .first()
+    )
 
     if profile:
 

@@ -9,10 +9,9 @@ from sqlalchemy import (
     DateTime,
 )
 
-from datetime import datetime
-
 from sqlalchemy.orm import relationship
 
+from app.core.security import utc_now
 from app.db.database import Base
 
 
@@ -133,11 +132,16 @@ class User(Base):
 
     created_at = Column(
         DateTime,
-        default=datetime.utcnow
+        default=utc_now
     )
 
     profile = relationship(
         "Profile",
         back_populates="user",
         uselist=False,
+    )
+
+    auth_sessions = relationship(
+        "AuthSession",
+        back_populates="user",
     )

@@ -12,6 +12,10 @@ from app.core.config import (
 APPLE_KEYS_URL = "https://appleid.apple.com/auth/keys"
 
 
+class AppleAuthUnavailable(Exception):
+    pass
+
+
 @dataclass(frozen=True)
 class AppleIdentity:
     sub: str
@@ -26,9 +30,14 @@ async def verify_apple_identity_token(identity_token: str) -> AppleIdentity:
         if not kid:
             raise JWTError("Missing key id")
 
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            response = await client.get(APPLE_KEYS_URL)
-            response.raise_for_status()
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(APPLE_KEYS_URL)
+                response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise AppleAuthUnavailable(
+                "Apple public key service unavailable"
+            ) from exc
 
         keys = response.json().get("keys", [])
         key = next(
@@ -61,5 +70,7 @@ async def verify_apple_identity_token(identity_token: str) -> AppleIdentity:
             email=payload.get("email"),
         )
 
-    except (httpx.HTTPError, JWTError, ValueError) as exc:
+    except AppleAuthUnavailable:
+        raise
+    except (JWTError, ValueError) as exc:
         raise JWTError("Invalid Apple identity token") from exc

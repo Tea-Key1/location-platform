@@ -1,6 +1,14 @@
 import requests
 
 
+class GeocoderRateLimited(Exception):
+    pass
+
+
+class GeocoderUnavailable(Exception):
+    pass
+
+
 def reverse_geocode(lat, lng):
 
     url = (
@@ -18,14 +26,28 @@ def reverse_geocode(lat, lng):
         "User-Agent": "roamie-app"
     }
 
-    r = requests.get(
-        url,
-        params=params,
-        headers=headers,
-        timeout=10
-    )
+    try:
+        r = requests.get(
+            url,
+            params=params,
+            headers=headers,
+            timeout=10
+        )
+    except requests.RequestException as exc:
+        raise GeocoderUnavailable("Geocoder request failed") from exc
 
-    data = r.json()
+    if r.status_code == 429:
+        raise GeocoderRateLimited("Geocoder rate limited")
+
+    try:
+        r.raise_for_status()
+    except requests.HTTPError as exc:
+        raise GeocoderUnavailable("Geocoder service unavailable") from exc
+
+    try:
+        data = r.json()
+    except ValueError as exc:
+        raise GeocoderUnavailable("Invalid geocoder response") from exc
 
     address = data.get("address", {})
 
@@ -40,7 +62,7 @@ def reverse_geocode(lat, lng):
         or address.get("village")
     )
 
-    suburb = (
+    district = (
         address.get("suburb")
         or address.get("neighbourhood")
     )
@@ -48,6 +70,6 @@ def reverse_geocode(lat, lng):
     return {
         "prefecture": prefecture,
         "city": city,
-        "suburb": suburb,
+        "district": district,
         "full": data.get("display_name")
     }

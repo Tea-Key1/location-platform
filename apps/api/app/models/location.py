@@ -1,13 +1,13 @@
 from sqlalchemy import (
     Column,
+    ForeignKey,
     Integer,
     Float,
     String,
     DateTime,
 )
 
-from datetime import datetime, timezone
-
+from app.core.security import utc_now
 from app.db.database import Base
 
 
@@ -18,6 +18,13 @@ class Location(Base):
     id = Column(
         Integer,
         primary_key=True,
+        index=True,
+    )
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
         index=True,
     )
 
@@ -36,14 +43,15 @@ class Location(Base):
         nullable=True,
     )
 
-    similarity = Column(
-        Float,
-        nullable=True,
+    timestamp = Column(
+        DateTime,
+        nullable=False,
+        index=True,
     )
 
-    parent_s2_id = Column(
+    s2_level12_id = Column(
         String,
-        nullable=True,
+        nullable=False,
         index=True,
     )
 
@@ -52,13 +60,18 @@ class Location(Base):
         nullable=True,
     )
 
-    city_name = Column(
+    city = Column(
+        String,
+        nullable=True,
+    )
+
+    locality = Column(
         String,
         nullable=True,
     )
 
     created_at = Column(
         DateTime,
-        default=lambda:
-            datetime.now(timezone.utc)
+        default=utc_now,
+        nullable=False,
     )

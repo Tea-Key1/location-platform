@@ -2,7 +2,7 @@
 # app/main.py
 # =========================================
 
-import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
@@ -12,16 +12,6 @@ from fastapi.middleware.cors import (
 
 from slowapi.middleware import (
     SlowAPIMiddleware
-)
-
-# =========================================
-# DB
-# =========================================
-
-from app.db.database import (
-    Base,
-    engine,
-    ensure_sqlite_schema,
 )
 
 # =========================================
@@ -60,28 +50,29 @@ from app.core.rate_limit import (
     limiter
 )
 
+from app.core.config import (
+    CORS_ORIGINS,
+    ENV,
+)
+
 # =========================================
 # ENV
 # =========================================
 
-ENV = os.getenv(
-    "ENV",
-    "development"
-)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
 
-# =========================================
-# DB CREATE
-# =========================================
+    print("===================================")
+    print("Roamie API starting...")
+    print(f"ENV: {ENV}")
+    print("===================================")
 
-Base.metadata.create_all(
-    bind=engine
-)
+    yield
 
-ensure_sqlite_schema()
+    print("===================================")
+    print("Roamie API shutting down...")
+    print("===================================")
 
-# =========================================
-# APP
-# =========================================
 
 app = FastAPI(
 
@@ -91,6 +82,8 @@ app = FastAPI(
     "GeoAI Personality Platform API",
 
     version="1.0.0",
+
+    lifespan=lifespan,
 )
 
 # =========================================
@@ -119,9 +112,9 @@ app.add_middleware(
 
     CORSMiddleware,
 
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
 
-    allow_credentials=True,
+    allow_credentials="*" not in CORS_ORIGINS,
 
     allow_methods=["*"],
 
@@ -178,25 +171,3 @@ async def health():
         "status": "ok"
     }
 
-# =========================================
-# STARTUP EVENT
-# =========================================
-
-@app.on_event("startup")
-async def startup_event():
-
-    print("===================================")
-    print("🚀 Roamie API starting...")
-    print(f"🌎 ENV: {ENV}")
-    print("===================================")
-
-# =========================================
-# SHUTDOWN EVENT
-# =========================================
-
-@app.on_event("shutdown")
-async def shutdown_event():
-
-    print("===================================")
-    print("🛑 Roamie API shutting down...")
-    print("===================================")

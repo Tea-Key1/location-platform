@@ -2,7 +2,7 @@
 # app/schemas/similarity.py
 # =========================================
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # =========================================
@@ -24,11 +24,11 @@ class AreaResponse(BaseModel):
 
 class SimilarityRequest(BaseModel):
 
-    home_lat: float
-    home_lng: float
+    home_lat: float = Field(ge=-90.0, le=90.0)
+    home_lng: float = Field(ge=-180.0, le=180.0)
 
-    current_lat: float
-    current_lng: float
+    current_lat: float = Field(ge=-90.0, le=90.0)
+    current_lng: float = Field(ge=-180.0, le=180.0)
 
 
 # =========================================
@@ -52,11 +52,11 @@ class SimilaritySearchRequest(
     BaseModel
 ):
 
-    lat: float
+    lat: float = Field(ge=-90.0, le=90.0)
 
-    lng: float
+    lng: float = Field(ge=-180.0, le=180.0)
 
-    top_k: int = 10
+    top_k: int = Field(default=10, ge=1, le=50)
 
 
 # =========================================

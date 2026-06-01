@@ -1,7 +1,7 @@
 # app/schemas/profile.py
 
 from typing import Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 AgeGroup = Literal[
@@ -27,8 +27,8 @@ class OnboardingRequest(BaseModel):
 
     gender: Gender
 
-    home_lat: float
-    home_lng: float
+    home_lat: float = Field(ge=-90.0, le=90.0)
+    home_lng: float = Field(ge=-180.0, le=180.0)
 
     calm: float = Field(ge=0.0, le=1.0)
     vivid: float = Field(ge=0.0, le=1.0)
@@ -42,6 +42,8 @@ class OnboardingRequest(BaseModel):
 
 
 class ProfileResponse(BaseModel):
+
+    model_config = ConfigDict(from_attributes=True)
 
     age_group: str
     gender: str
@@ -71,8 +73,8 @@ class ProfileCompletionResponse(BaseModel):
     profile_completed: bool
 
 class HomeLocationRequest(BaseModel):
-    home_lat: float
-    home_lng: float
+    home_lat: float = Field(ge=-90.0, le=90.0)
+    home_lng: float = Field(ge=-180.0, le=180.0)
 
 class HomeLocationResponse(BaseModel):
     profile_completed: bool

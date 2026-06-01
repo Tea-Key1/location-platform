@@ -1,93 +1,25 @@
-from fastapi import APIRouter
-
-from app.services.s2cell import (
-    latlng_to_s2
-)
-
-from app.services.embedding_store import (
-    embedding_store
-)
-
-from app.services.similarity import (
-    cosine_similarity
-)
-
-from app.services.geocoder import (
-    reverse_geocode
-)
-
-router = APIRouter()
+import numpy as np
 
 
-@router.post("/similarity")
-def similarity(req: dict):
+def cosine_similarity(a, b):
 
-    home_lat = req["home_lat"]
-    home_lng = req["home_lng"]
+    if a is None or b is None:
 
-    current_lat = req["current_lat"]
-    current_lng = req["current_lng"]
+        return None
 
-    # -------------------------
-    # S2
-    # -------------------------
+    a_norm = np.linalg.norm(a)
+    b_norm = np.linalg.norm(b)
 
-    home_s2 = latlng_to_s2(
-        home_lat,
-        home_lng
+    if a_norm == 0 or b_norm == 0:
+
+        return None
+
+    similarity = float(
+        np.dot(a, b)
+        / (a_norm * b_norm)
     )
 
-    current_s2 = latlng_to_s2(
-        current_lat,
-        current_lng
+    return max(
+        -1.0,
+        min(1.0, similarity),
     )
-
-    # -------------------------
-    # embedding
-    # -------------------------
-
-    home_vec = embedding_store.get(
-        home_s2
-    )
-
-    current_vec = embedding_store.get(
-        current_s2
-    )
-
-    # -------------------------
-    # similarity
-    # -------------------------
-
-    sim = cosine_similarity(
-        home_vec,
-        current_vec
-    )
-
-    # -------------------------
-    # reverse geocode
-    # -------------------------
-
-    home_geo = reverse_geocode(
-        home_lat,
-        home_lng
-    )
-
-    current_geo = reverse_geocode(
-        current_lat,
-        current_lng
-    )
-
-    return {
-
-        "home": {
-            "s2_id": home_s2,
-            "geo": home_geo,
-        },
-
-        "current": {
-            "s2_id": current_s2,
-            "geo": current_geo,
-        },
-
-        "similarity": sim
-    }

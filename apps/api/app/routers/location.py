@@ -2,17 +2,19 @@
 # app/routers/location.py
 # =========================================
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import (
     APIRouter,
     Depends,
+    HTTPException,
+    Request,
 )
 
 from sqlalchemy.orm import Session
 
 from app.db.database import (
-    SessionLocal
+    get_db
 )
 
 from app.dependencies.auth import (
@@ -20,12 +22,24 @@ from app.dependencies.auth import (
 )
 
 from app.models.user import User
+from app.models.location import Location
 
 from app.schemas.location import (
     LocationCreate,
     LocationItem,
     LocationListResponse,
 )
+
+from app.core.rate_limit import limiter
+
+from app.services.geocoder import (
+    GeocoderRateLimited,
+    GeocoderUnavailable,
+    reverse_geocode,
+)
+
+from app.services.s2cell import latlng_to_s2
+from app.core.security import utc_now
 
 # =========================================
 # Router
@@ -38,31 +52,14 @@ router = APIRouter(
     tags=["locations"]
 )
 
-# =========================================
-# DB Dependency
-# =========================================
-
-def get_db():
-
-    db = SessionLocal()
-
-    try:
-
-        yield db
-
-    finally:
-
-        db.close()
-
-# =========================================
-# GET LOCATIONS
-# =========================================
-
 @router.get(
     "",
     response_model=LocationListResponse
 )
+@limiter.limit("60/minute")
 async def get_locations(
+
+    request: Request,
 
     db: Session = Depends(get_db),
 
@@ -71,9 +68,17 @@ async def get_locations(
     )
 ):
 
+    locations = (
+        db.query(Location)
+        .filter(Location.user_id == current_user.id)
+        .order_by(Location.timestamp.desc())
+        .limit(100)
+        .all()
+    )
+
     return {
 
-        "items": []
+        "items": locations
     }
 
 # =========================================
@@ -86,26 +91,62 @@ async def get_locations(
     response_model=
     LocationItem
 )
+@limiter.limit("60/minute")
 async def create_location(
 
+    request: Request,
+
     payload: LocationCreate,
+
+    db: Session = Depends(get_db),
 
     current_user: User = Depends(
         get_current_user
     )
 ):
 
-    return {
+    timestamp = payload.timestamp or utc_now()
 
-        "id": "loc_1",
+    if timestamp.tzinfo is not None:
+        timestamp = (
+            timestamp
+            .astimezone(timezone.utc)
+            .replace(tzinfo=None)
+        )
 
-        "lat": payload.lat,
+    try:
+        area = reverse_geocode(
+            payload.lat,
+            payload.lng
+        )
+    except GeocoderRateLimited as exc:
+        raise HTTPException(
+            status_code=429,
+            detail=str(exc),
+        )
+    except GeocoderUnavailable as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=str(exc),
+        )
 
-        "lng": payload.lng,
+    location = Location(
+        user_id=current_user.id,
+        lat=payload.lat,
+        lng=payload.lng,
+        accuracy=payload.accuracy,
+        timestamp=timestamp,
+        s2_level12_id=latlng_to_s2(
+            payload.lat,
+            payload.lng,
+        ),
+        prefecture=area.get("prefecture"),
+        city=area.get("city"),
+        locality=area.get("district"),
+    )
 
-        "accuracy":
-            payload.accuracy,
+    db.add(location)
+    db.commit()
+    db.refresh(location)
 
-        "created_at":
-            datetime.utcnow()
-    }
+    return location

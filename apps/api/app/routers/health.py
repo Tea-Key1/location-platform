@@ -1,9 +1,11 @@
 from fastapi import APIRouter
+from fastapi import Depends
 
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from app.db.database import (
-    SessionLocal
+    get_db
 )
 
 from app.schemas.health import (
@@ -21,9 +23,9 @@ router = APIRouter(
     response_model=
     HealthResponse
 )
-async def health():
-
-    db = SessionLocal()
+async def health(
+    db: Session = Depends(get_db),
+):
 
     try:
 
