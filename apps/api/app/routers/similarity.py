@@ -5,9 +5,12 @@
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import HTTPException
+from fastapi import Query
 from fastapi import Request
+from sqlalchemy.orm import Session
 
 from app.dependencies.auth import get_current_user
+from app.db.database import get_db
 
 from app.models.user import User
 
@@ -18,6 +21,10 @@ from app.schemas.similarity import (
     SimilarityRequest,
 
     SimilarityResponse,
+
+    RankingPeriod,
+
+    SimilarityRankingsResponse,
 
     SimilaritySearchRequest,
 
@@ -34,7 +41,11 @@ from app.services.s2cell import latlng_to_s2
 
 from app.services.embedding_store import embedding_store
 
-from app.services.similarity import cosine_similarity
+from app.services.similarity import (
+    cosine_similarity,
+    create_similarity_check,
+    list_similarity_rankings,
+)
 
 router = APIRouter(
 
@@ -59,6 +70,8 @@ async def calculate_similarity(
     body: SimilarityRequest,
 
     current_user: User = Depends(get_current_user),
+
+    db: Session = Depends(get_db),
 ):
 
     home_s2 = latlng_to_s2(
@@ -104,6 +117,17 @@ async def calculate_similarity(
             detail=str(exc),
         )
 
+    create_similarity_check(
+        db,
+        user=current_user,
+        similarity=similarity,
+        home_area=home_area,
+        current_area=current_area,
+        current_lat=body.current_lat,
+        current_lng=body.current_lng,
+        current_s2_id=current_s2,
+    )
+
     return {
 
         "similarity": similarity,
@@ -111,6 +135,35 @@ async def calculate_similarity(
         "home_area": home_area,
 
         "current_area": current_area,
+    }
+
+# =========================================
+# RANKINGS
+# =========================================
+
+@router.get(
+    "/rankings",
+    response_model=SimilarityRankingsResponse,
+)
+@limiter.limit("20/minute")
+async def rankings(
+
+    request: Request,
+
+    period: RankingPeriod = Query(...),
+
+    current_user: User = Depends(get_current_user),
+
+    db: Session = Depends(get_db),
+):
+
+    return {
+        "period": period,
+        "items": list_similarity_rankings(
+            db,
+            user_id=current_user.id,
+            period=period,
+        ),
     }
 
 # =========================================

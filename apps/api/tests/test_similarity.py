@@ -3,6 +3,7 @@ from uuid import uuid4
 from app.core.security import create_access_token, get_access_token_expires_at
 from app.db.database import SessionLocal
 from app.models.auth_session import AuthSession
+from app.models.similarity_check import SimilarityCheck
 from app.models.user import User
 from app.services.embedding_store import embedding_store
 
@@ -75,6 +76,16 @@ def test_same_home_and_current_location_returns_full_similarity(
 
     assert response.status_code == 200
     assert response.json()["similarity"] == 1.0
+
+    db = SessionLocal()
+    try:
+        check = db.query(SimilarityCheck).one()
+        assert check.similarity == 1.0
+        assert check.current_prefecture == "Okinawa"
+        assert check.current_city == "Taketomi"
+        assert check.tracking_consent_status_at_collection == "not_determined"
+    finally:
+        db.close()
 
 
 def test_out_of_coverage_home_or_current_returns_zero_similarity(

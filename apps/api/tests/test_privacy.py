@@ -5,6 +5,7 @@ from app.db.database import SessionLocal
 from app.models.auth_session import AuthSession
 from app.models.location import Location
 from app.models.profile import Profile
+from app.models.similarity_check import SimilarityCheck
 from app.models.tracking_consent_audit_log import TrackingConsentAuditLog
 from app.models.user import User
 from app.services.commercial_export import list_partner_mobility_locations
@@ -272,6 +273,29 @@ def test_delete_profile_deletes_account_data_and_excludes_export(
     )
     assert profile.status_code == 200
 
+    db = SessionLocal()
+    try:
+        db.add(
+            SimilarityCheck(
+                user_id=user_id,
+                similarity=0.8,
+                home_prefecture="Tokyo",
+                home_city="Shibuya",
+                home_district="Ebisu",
+                current_prefecture="Tokyo",
+                current_city="Shibuya",
+                current_district="Ebisu",
+                current_lat=35.646,
+                current_lng=139.710,
+                current_s2_id="test-s2",
+                commercial_tracking_allowed_at_collection=True,
+                tracking_consent_status_at_collection="authorized",
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
     location = create_location(client, headers, 35.646)
     assert location.status_code == 200
 
@@ -303,6 +327,12 @@ def test_delete_profile_deletes_account_data_and_excludes_export(
         assert (
             db.query(Location)
             .filter(Location.user_id == user_id)
+            .count()
+            == 0
+        )
+        assert (
+            db.query(SimilarityCheck)
+            .filter(SimilarityCheck.user_id == user_id)
             .count()
             == 0
         )

@@ -18,6 +18,7 @@ from app.models.user import User
 from app.models.profile import Profile
 from app.models.auth_session import AuthSession
 from app.models.location import Location
+from app.models.similarity_check import SimilarityCheck
 
 from app.schemas.profile import (
     ProfileResponse,
@@ -250,6 +251,12 @@ def delete_profile(
     (
         db.query(Location)
         .filter(Location.user_id == user_id)
+        .delete(synchronize_session=False)
+    )
+
+    (
+        db.query(SimilarityCheck)
+        .filter(SimilarityCheck.user_id == user_id)
         .delete(synchronize_session=False)
     )
 
