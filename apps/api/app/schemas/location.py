@@ -48,6 +48,10 @@ class LocationItem(BaseModel):
 
     locality: str | None = None
 
+    commercial_tracking_allowed_at_collection: bool
+
+    tracking_consent_status_at_collection: str
+
 
 # =========================================
 # LIST RESPONSE
