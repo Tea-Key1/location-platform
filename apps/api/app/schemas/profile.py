@@ -48,8 +48,16 @@ class ProfileResponse(BaseModel):
     age_group: str
     gender: str
 
-    home_lat: float
-    home_lng: float
+    home_lat: float = Field(
+        ge=-90.0,
+        le=90.0,
+        examples=[35.681236],
+    )
+    home_lng: float = Field(
+        ge=-180.0,
+        le=180.0,
+        examples=[139.767125],
+    )
 
     calm: float
     vivid: float

@@ -80,6 +80,8 @@ async def calculate_similarity(
 
     if similarity is None:
         similarity = 0.0
+    else:
+        similarity = max(0.0, min(1.0, similarity))
 
     try:
         home_area = reverse_geocode(

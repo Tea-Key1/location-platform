@@ -11,11 +11,11 @@ from pydantic import BaseModel, Field
 
 class AreaResponse(BaseModel):
 
-    prefecture: str | None = None
+    prefecture: str | None = Field(default=None, examples=["東京都"])
 
-    city: str | None = None
+    city: str | None = Field(default=None, examples=["千代田区"])
 
-    district: str | None = None
+    district: str | None = Field(default=None, examples=["丸の内"])
 
 
 # =========================================
@@ -24,11 +24,11 @@ class AreaResponse(BaseModel):
 
 class SimilarityRequest(BaseModel):
 
-    home_lat: float = Field(ge=-90.0, le=90.0)
-    home_lng: float = Field(ge=-180.0, le=180.0)
+    home_lat: float = Field(ge=-90.0, le=90.0, examples=[35.681236])
+    home_lng: float = Field(ge=-180.0, le=180.0, examples=[139.767125])
 
-    current_lat: float = Field(ge=-90.0, le=90.0)
-    current_lng: float = Field(ge=-180.0, le=180.0)
+    current_lat: float = Field(ge=-90.0, le=90.0, examples=[35.6895])
+    current_lng: float = Field(ge=-180.0, le=180.0, examples=[139.6917])
 
 
 # =========================================
@@ -37,7 +37,7 @@ class SimilarityRequest(BaseModel):
 
 class SimilarityResponse(BaseModel):
 
-    similarity: float
+    similarity: float = Field(ge=0.0, le=1.0, examples=[0.82])
 
     home_area: AreaResponse
 

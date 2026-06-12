@@ -136,6 +136,13 @@ def get_me(
             detail="Profile not found"
         )
 
+    if user.profile.home_lat is None or user.profile.home_lng is None:
+
+        raise HTTPException(
+            status_code=422,
+            detail="Home location is not set"
+        )
+
     return user.profile
 
 # =========================================
