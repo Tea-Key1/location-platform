@@ -9,6 +9,7 @@ from app.db.database import Base
 from app.models.auth_session import AuthSession
 from app.models.location import Location
 from app.models.profile import Profile
+from app.models.tracking_consent_audit_log import TrackingConsentAuditLog
 from app.models.user import User
 
 config = context.config

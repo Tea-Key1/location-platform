@@ -16,6 +16,8 @@ from app.dependencies.auth import (
 
 from app.models.user import User
 from app.models.profile import Profile
+from app.models.auth_session import AuthSession
+from app.models.location import Location
 
 from app.schemas.profile import (
     ProfileResponse,
@@ -230,18 +232,28 @@ def delete_profile(
 
     db: Session = Depends(get_db),
 ):
+    user_id = current_user.id
 
-    profile = (
-        db.query(Profile)
-        .filter(Profile.user_id == current_user.id)
-        .first()
+    (
+        db.query(AuthSession)
+        .filter(AuthSession.user_id == user_id)
+        .delete(synchronize_session=False)
     )
 
-    if profile:
+    (
+        db.query(Location)
+        .filter(Location.user_id == user_id)
+        .delete(synchronize_session=False)
+    )
 
-        db.delete(profile)
+    (
+        db.query(Profile)
+        .filter(Profile.user_id == user_id)
+        .delete(synchronize_session=False)
+    )
 
-        db.commit()
+    db.delete(current_user)
+    db.commit()
 
     return {
 

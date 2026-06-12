@@ -143,6 +143,13 @@ async def create_location(
         prefecture=area.get("prefecture"),
         city=area.get("city"),
         locality=area.get("district"),
+        commercial_tracking_allowed_at_collection=(
+            current_user.tracking_authorized is True
+        ),
+        tracking_consent_status_at_collection=(
+            current_user.tracking_status
+            or "not_determined"
+        ),
     )
 
     db.add(location)

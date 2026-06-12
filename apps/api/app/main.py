@@ -30,6 +30,10 @@ from app.routers.profile import (
     router as profile_router
 )
 
+from app.routers.privacy import (
+    router as privacy_router
+)
+
 from app.routers.health import (
     router as health_router
 )
@@ -135,6 +139,10 @@ app.include_router(
 
 app.include_router(
     profile_router
+)
+
+app.include_router(
+    privacy_router
 )
 
 app.include_router(

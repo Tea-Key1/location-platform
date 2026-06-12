@@ -127,6 +127,32 @@ class User(Base):
     )
 
     # =========================================
+    # Tracking Consent
+    # =========================================
+
+    tracking_authorized = Column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
+
+    tracking_status = Column(
+        String,
+        default="not_determined",
+        nullable=False,
+    )
+
+    tracking_updated_at = Column(
+        DateTime,
+        nullable=True,
+    )
+
+    tracking_source = Column(
+        String,
+        nullable=True,
+    )
+
+    # =========================================
     # Created At
     # =========================================
 
@@ -143,5 +169,10 @@ class User(Base):
 
     auth_sessions = relationship(
         "AuthSession",
+        back_populates="user",
+    )
+
+    locations = relationship(
+        "Location",
         back_populates="user",
     )
