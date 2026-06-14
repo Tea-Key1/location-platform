@@ -23,6 +23,14 @@ def count_sessions():
         db.close()
 
 
+def count_users():
+    db = SessionLocal()
+    try:
+        return db.query(User).count()
+    finally:
+        db.close()
+
+
 def create_user_with_session():
     db = SessionLocal()
     try:
@@ -108,6 +116,66 @@ def test_existing_user_login_creates_new_session(client, monkeypatch):
     assert first.status_code == 200
     assert second.status_code == 200
     assert count_sessions() == 2
+
+
+def test_watch_and_iphone_login_with_same_apple_sub_use_same_user(
+    client,
+    monkeypatch,
+):
+    async def fake_verify(identity_token):
+        return AppleIdentity(
+            sub="shared-apple-sub",
+            email=f"{identity_token}@example.com",
+        )
+
+    monkeypatch.setattr(
+        "app.routers.auth.verify_apple_identity_token",
+        fake_verify,
+    )
+
+    iphone = client.post(
+        "/auth/apple",
+        json={"identity_token": "iphone"},
+    )
+    watch = client.post(
+        "/auth/apple",
+        json={
+            "identity_token": "watch",
+            "authorization_code": "watch-auth-code",
+        },
+        headers={"User-Agent": "Roamie WatchKit Extension"},
+    )
+
+    assert iphone.status_code == 200
+    assert watch.status_code == 200
+    assert count_users() == 1
+    assert count_sessions() == 2
+
+
+def test_watch_login_with_new_apple_sub_creates_user(client, monkeypatch):
+    async def fake_verify(identity_token):
+        return AppleIdentity(
+            sub="watch-new-sub",
+            email=None,
+        )
+
+    monkeypatch.setattr(
+        "app.routers.auth.verify_apple_identity_token",
+        fake_verify,
+    )
+
+    response = client.post(
+        "/auth/apple",
+        json={
+            "identity_token": "watch-token",
+            "authorization_code": "watch-auth-code",
+        },
+        headers={"User-Agent": "Roamie WatchKit Extension"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["access_token"]
+    assert count_users() == 1
 
 
 def test_logout_revokes_current_token(client):

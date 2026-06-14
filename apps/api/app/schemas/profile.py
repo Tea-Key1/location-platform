@@ -45,29 +45,31 @@ class ProfileResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    age_group: str
-    gender: str
+    age_group: str | None = None
+    gender: str | None = None
 
-    home_lat: float = Field(
+    home_lat: float | None = Field(
+        default=None,
         ge=-90.0,
         le=90.0,
         examples=[35.681236],
     )
-    home_lng: float = Field(
+    home_lng: float | None = Field(
+        default=None,
         ge=-180.0,
         le=180.0,
         examples=[139.767125],
     )
 
-    calm: float
-    vivid: float
+    calm: float = 0.0
+    vivid: float = 0.0
 
-    roamer: float
-    luxury: float
-    nature: float
-    nightlife: float
-    local: float
-    creative: float
+    roamer: float = 0.0
+    luxury: float = 0.0
+    nature: float = 0.0
+    nightlife: float = 0.0
+    local: float = 0.0
+    creative: float = 0.0
 
 
 class OnboardingResponse(BaseModel):

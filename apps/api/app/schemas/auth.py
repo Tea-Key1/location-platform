@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 class AppleLoginRequest(BaseModel):
     identity_token: str
+    authorization_code: str | None = None
 
 
 class AppleLoginResponse(BaseModel):

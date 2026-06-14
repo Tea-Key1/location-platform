@@ -96,7 +96,7 @@ def test_watch_can_get_profile_home_with_bearer_token_when_att_denied(client):
     assert body["home_lng"] == 139.767125
 
 
-def test_profile_me_rejects_profile_without_home_location(client):
+def test_profile_me_returns_null_home_without_error(client):
     headers = create_user_headers(
         profile=complete_profile(
             home_lat=None,
@@ -109,8 +109,57 @@ def test_profile_me_rejects_profile_without_home_location(client):
         headers=headers,
     )
 
+    assert response.status_code == 200
+    assert response.json()["home_lat"] is None
+    assert response.json()["home_lng"] is None
+
+
+def test_profile_me_creates_empty_profile_for_new_watch_user(client):
+    headers = create_user_headers()
+
+    response = client.get(
+        "/profiles/me",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["age_group"] is None
+    assert body["gender"] is None
+    assert body["home_lat"] is None
+    assert body["home_lng"] is None
+
+
+def test_watch_can_patch_home_when_att_denied(client):
+    headers = create_user_headers(tracking_status="denied")
+
+    response = client.patch(
+        "/profiles/me",
+        headers=headers,
+        json={
+            "home_lat": 35.681236,
+            "home_lng": 139.767125,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["home_lat"] == 35.681236
+    assert response.json()["home_lng"] == 139.767125
+
+
+def test_patch_home_rejects_invalid_coordinates(client):
+    headers = create_user_headers()
+
+    response = client.patch(
+        "/profiles/me",
+        headers=headers,
+        json={
+            "home_lat": 91.0,
+            "home_lng": 139.767125,
+        },
+    )
+
     assert response.status_code == 422
-    assert response.json()["detail"] == "Home location is not set"
 
 
 def test_watch_similarity_response_shape_when_att_restricted(
@@ -120,9 +169,13 @@ def test_watch_similarity_response_shape_when_att_restricted(
     monkeypatch.setattr(
         "app.routers.similarity.reverse_geocode",
         lambda lat, lng: {
-            "prefecture": "東京都",
-            "city": "千代田区" if lat == 35.681236 else "新宿区",
-            "district": "丸の内" if lat == 35.681236 else "西新宿",
+            "prefecture": "Tokyo",
+            "city": "Chiyoda" if lat == 35.681236 else "Shinjuku",
+            "district": (
+                "Marunouchi"
+                if lat == 35.681236
+                else "Nishishinjuku"
+            ),
         },
     )
 

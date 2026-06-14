@@ -38,6 +38,23 @@ router = APIRouter(
     tags=["profiles"],
 )
 
+
+def serialize_profile(profile: Profile):
+    return {
+        "age_group": profile.age_group,
+        "gender": profile.gender,
+        "home_lat": profile.home_lat,
+        "home_lng": profile.home_lng,
+        "calm": profile.calm or 0.0,
+        "vivid": profile.vivid or 0.0,
+        "roamer": profile.roamer or 0.0,
+        "luxury": profile.luxury or 0.0,
+        "nature": profile.nature or 0.0,
+        "nightlife": profile.nightlife or 0.0,
+        "local": profile.local or 0.0,
+        "creative": profile.creative or 0.0,
+    }
+
 # =========================================
 # ONBOARDING
 # =========================================
@@ -128,23 +145,22 @@ def get_me(
     user: User = Depends(
         get_current_user
     ),
+
+    db: Session = Depends(get_db),
 ):
 
     if not user.profile:
 
-        raise HTTPException(
-            status_code=404,
-            detail="Profile not found"
+        profile = Profile(
+            user_id=user.id
         )
+        db.add(profile)
+        db.commit()
+        db.refresh(profile)
 
-    if user.profile.home_lat is None or user.profile.home_lng is None:
+        return serialize_profile(profile)
 
-        raise HTTPException(
-            status_code=422,
-            detail="Home location is not set"
-        )
-
-    return user.profile
+    return serialize_profile(user.profile)
 
 # =========================================
 # COMPLETION
@@ -221,8 +237,46 @@ def update_home(
 
         "profile_completed": True,
 
-        "profile": profile,
+        "profile": serialize_profile(profile),
     }
+
+
+@router.patch(
+    "/me",
+    response_model=ProfileResponse,
+)
+def patch_me(
+
+    body: HomeLocationRequest,
+
+    current_user: User = Depends(
+        get_current_user
+    ),
+
+    db: Session = Depends(get_db),
+):
+
+    profile = (
+        db.query(Profile)
+        .filter(Profile.user_id == current_user.id)
+        .first()
+    )
+
+    if not profile:
+
+        profile = Profile(
+            user_id=current_user.id
+        )
+
+        db.add(profile)
+
+    profile.home_lat = body.home_lat
+    profile.home_lng = body.home_lng
+
+    db.commit()
+    db.refresh(profile)
+
+    return serialize_profile(profile)
 
 # =========================================
 # DELETE PROFILE
