@@ -81,6 +81,11 @@ class SimilarityCheck(Base):
         index=True,
     )
 
+    source = Column(
+        String,
+        nullable=True,
+    )
+
     commercial_tracking_allowed_at_collection = Column(
         Boolean,
         default=False,

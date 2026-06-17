@@ -71,6 +71,7 @@ def test_same_home_and_current_location_returns_full_similarity(
             "home_lng": item["lng"],
             "current_lat": item["lat"],
             "current_lng": item["lng"],
+            "source": "manual",
         },
     )
 
@@ -83,6 +84,9 @@ def test_same_home_and_current_location_returns_full_similarity(
         assert check.similarity == 1.0
         assert check.current_prefecture == "Okinawa"
         assert check.current_city == "Taketomi"
+        assert check.current_lat == item["lat"]
+        assert check.current_lng == item["lng"]
+        assert check.source == "manual"
         assert check.tracking_consent_status_at_collection == "not_determined"
     finally:
         db.close()

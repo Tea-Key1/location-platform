@@ -27,8 +27,8 @@ class OnboardingRequest(BaseModel):
 
     gender: Gender
 
-    home_lat: float = Field(ge=-90.0, le=90.0)
-    home_lng: float = Field(ge=-180.0, le=180.0)
+    home_lat: float | None = Field(default=None, ge=-90.0, le=90.0)
+    home_lng: float | None = Field(default=None, ge=-180.0, le=180.0)
 
     calm: float = Field(ge=0.0, le=1.0)
     vivid: float = Field(ge=0.0, le=1.0)

@@ -11,6 +11,7 @@ from app.core.security import (
 )
 from app.db.database import SessionLocal
 from app.models.auth_session import AuthSession
+from app.models.profile import Profile
 from app.models.user import User
 from app.services.apple_auth import AppleIdentity
 
@@ -176,6 +177,60 @@ def test_watch_login_with_new_apple_sub_creates_user(client, monkeypatch):
     assert response.status_code == 200
     assert response.json()["access_token"]
     assert count_users() == 1
+
+
+def test_apple_login_profile_completed_does_not_require_home(
+    client,
+    monkeypatch,
+):
+    db = SessionLocal()
+    try:
+        user = User(
+            apple_sub="profile-without-home",
+            email="profile@example.com",
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        db.add(
+            Profile(
+                user_id=user.id,
+                age_group="20s",
+                gender="other",
+                home_lat=None,
+                home_lng=None,
+                calm=0.1,
+                vivid=0.2,
+                roamer=0.3,
+                luxury=0.4,
+                nature=0.5,
+                nightlife=0.6,
+                local=0.7,
+                creative=0.8,
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    async def fake_verify(identity_token):
+        return AppleIdentity(
+            sub="profile-without-home",
+            email="profile@example.com",
+        )
+
+    monkeypatch.setattr(
+        "app.routers.auth.verify_apple_identity_token",
+        fake_verify,
+    )
+
+    response = client.post(
+        "/auth/apple",
+        json={"identity_token": "valid-apple-token"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["profile_completed"] is True
 
 
 def test_logout_revokes_current_token(client):

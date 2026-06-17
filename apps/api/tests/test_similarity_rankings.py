@@ -63,6 +63,8 @@ def add_similarity_check(
     prefecture="Tokyo",
     city="Chiyoda",
     district="Marunouchi",
+    lat=35.0,
+    lng=139.0,
     checked_at=None,
 ):
     db = SessionLocal()
@@ -77,8 +79,8 @@ def add_similarity_check(
                 current_prefecture=prefecture,
                 current_city=city,
                 current_district=district,
-                current_lat=35.0,
-                current_lng=139.0,
+                current_lat=lat,
+                current_lng=lng,
                 current_s2_id=f"s2-{uuid4()}",
                 commercial_tracking_allowed_at_collection=False,
                 tracking_consent_status_at_collection="denied",
@@ -130,10 +132,41 @@ def test_rankings_are_user_scoped_and_sorted_by_average_similarity(client):
     assert body["items"][0]["average_similarity"] == 0.9
     assert body["items"][0]["best_similarity"] == 0.9
     assert body["items"][0]["check_count"] == 1
+    assert body["items"][0]["lat"] == 35.0
+    assert body["items"][0]["lng"] == 139.0
     assert body["items"][0]["latest_checked_at"].endswith("Z")
     assert body["items"][1]["average_similarity"] == 0.8
     assert body["items"][1]["best_similarity"] == 1.0
     assert body["items"][1]["check_count"] == 2
+    assert body["items"][1]["lat"] == 35.0
+    assert body["items"][1]["lng"] == 139.0
+
+
+def test_rankings_return_average_lat_lng(client):
+    user_id, headers = create_user_headers()
+
+    add_similarity_check(
+        user_id,
+        similarity=0.6,
+        lat=35.0,
+        lng=139.0,
+    )
+    add_similarity_check(
+        user_id,
+        similarity=0.8,
+        lat=36.0,
+        lng=140.0,
+    )
+
+    response = client.get(
+        "/similarity/rankings?period=month",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    item = response.json()["items"][0]
+    assert item["lat"] == 35.5
+    assert item["lng"] == 139.5
 
 
 def test_rankings_filter_by_period(client):

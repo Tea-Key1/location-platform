@@ -32,6 +32,8 @@ class SimilarityRequest(BaseModel):
     current_lat: float = Field(ge=-90.0, le=90.0, examples=[35.6895])
     current_lng: float = Field(ge=-180.0, le=180.0, examples=[139.6917])
 
+    source: Literal["device", "manual"] | None = None
+
 
 # =========================================
 # RESPONSE
@@ -103,6 +105,10 @@ class SimilarityRankingItem(BaseModel):
     rank: int = Field(ge=1)
 
     area: AreaResponse
+
+    lat: float | None = Field(ge=-90.0, le=90.0)
+
+    lng: float | None = Field(ge=-180.0, le=180.0)
 
     average_similarity: float = Field(ge=0.0, le=1.0)
 

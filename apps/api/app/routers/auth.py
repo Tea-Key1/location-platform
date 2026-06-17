@@ -48,6 +48,22 @@ router = APIRouter(
 )
 
 
+def is_profile_completed(profile: Profile | None):
+    return (
+        profile is not None
+        and profile.age_group is not None
+        and profile.gender is not None
+        and profile.calm is not None
+        and profile.vivid is not None
+        and profile.roamer is not None
+        and profile.luxury is not None
+        and profile.nature is not None
+        and profile.nightlife is not None
+        and profile.local is not None
+        and profile.creative is not None
+    )
+
+
 @router.post(
     "/apple",
     response_model=AppleLoginResponse,
@@ -138,13 +154,7 @@ async def apple_login(
         .first()
     )
 
-    profile_completed = (
-        profile is not None
-        and profile.age_group is not None
-        and profile.gender is not None
-        and profile.home_lat is not None
-        and profile.home_lng is not None
-    )
+    profile_completed = is_profile_completed(profile)
 
     return AppleLoginResponse(
         access_token=token,

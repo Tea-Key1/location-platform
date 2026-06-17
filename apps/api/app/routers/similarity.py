@@ -126,6 +126,7 @@ async def calculate_similarity(
         current_lat=body.current_lat,
         current_lng=body.current_lng,
         current_s2_id=current_s2,
+        source=body.source,
     )
 
     return {

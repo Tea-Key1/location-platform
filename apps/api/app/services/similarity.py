@@ -68,6 +68,7 @@ def create_similarity_check(
     current_lat: float,
     current_lng: float,
     current_s2_id: str,
+    source: str | None = None,
 ):
     check = SimilarityCheck(
         user_id=user.id,
@@ -81,6 +82,7 @@ def create_similarity_check(
         current_lat=current_lat,
         current_lng=current_lng,
         current_s2_id=current_s2_id,
+        source=source,
         commercial_tracking_allowed_at_collection=(
             user.tracking_authorized is True
         ),
@@ -107,6 +109,8 @@ def list_similarity_rankings(
             SimilarityCheck.current_prefecture.label("prefecture"),
             SimilarityCheck.current_city.label("city"),
             SimilarityCheck.current_district.label("district"),
+            func.avg(SimilarityCheck.current_lat).label("lat"),
+            func.avg(SimilarityCheck.current_lng).label("lng"),
             func.avg(SimilarityCheck.similarity).label("average_similarity"),
             func.max(SimilarityCheck.similarity).label("best_similarity"),
             func.count(SimilarityCheck.id).label("check_count"),
@@ -147,6 +151,8 @@ def list_similarity_rankings(
                     "city": row.city,
                     "district": row.district,
                 },
+                "lat": None if row.lat is None else float(row.lat),
+                "lng": None if row.lng is None else float(row.lng),
                 "average_similarity": average_similarity,
                 "best_similarity": best_similarity,
                 "check_count": row.check_count,

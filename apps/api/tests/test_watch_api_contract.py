@@ -130,6 +130,41 @@ def test_profile_me_creates_empty_profile_for_new_watch_user(client):
     assert body["home_lng"] is None
 
 
+def test_onboarding_without_home_completes_profile(client):
+    headers = create_user_headers()
+
+    response = client.post(
+        "/profiles/onboarding",
+        headers=headers,
+        json={
+            "age_group": "20s",
+            "gender": "other",
+            "calm": 0.1,
+            "vivid": 0.2,
+            "roamer": 0.3,
+            "luxury": 0.4,
+            "nature": 0.5,
+            "nightlife": 0.6,
+            "local": 0.7,
+            "creative": 0.8,
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["profile_completed"] is True
+    assert body["profile"]["home_lat"] is None
+    assert body["profile"]["home_lng"] is None
+
+    completion = client.get(
+        "/profiles/completion",
+        headers=headers,
+    )
+
+    assert completion.status_code == 200
+    assert completion.json() == {"profile_completed": True}
+
+
 def test_watch_can_patch_home_when_att_denied(client):
     headers = create_user_headers(tracking_status="denied")
 

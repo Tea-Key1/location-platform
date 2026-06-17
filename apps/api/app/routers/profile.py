@@ -55,6 +55,22 @@ def serialize_profile(profile: Profile):
         "creative": profile.creative or 0.0,
     }
 
+
+def is_profile_completed(profile: Profile | None):
+    return (
+        profile is not None
+        and profile.age_group is not None
+        and profile.gender is not None
+        and profile.calm is not None
+        and profile.vivid is not None
+        and profile.roamer is not None
+        and profile.luxury is not None
+        and profile.nature is not None
+        and profile.nightlife is not None
+        and profile.local is not None
+        and profile.creative is not None
+    )
+
 # =========================================
 # ONBOARDING
 # =========================================
@@ -177,18 +193,7 @@ def completion(
     ),
 ):
 
-    completed = (
-
-        user.profile is not None
-
-        and user.profile.age_group is not None
-
-        and user.profile.gender is not None
-
-        and user.profile.home_lat is not None
-
-        and user.profile.home_lng is not None
-    )
+    completed = is_profile_completed(user.profile)
 
     return {
 
