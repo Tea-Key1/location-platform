@@ -106,6 +106,10 @@ class SimilarityRankingItem(BaseModel):
 
     area: AreaResponse
 
+    home_area: AreaResponse
+
+    current_area: AreaResponse
+
     lat: float | None = Field(ge=-90.0, le=90.0)
 
     lng: float | None = Field(ge=-180.0, le=180.0)

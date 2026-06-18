@@ -71,5 +71,6 @@ def reverse_geocode(lat, lng):
         "prefecture": prefecture,
         "city": city,
         "district": district,
-        "full": data.get("display_name")
+        "country_code": address.get("country_code"),
+        "full": data.get("display_name"),
     }

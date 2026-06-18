@@ -8,8 +8,10 @@ from app.core.security import (
 )
 from app.db.database import SessionLocal
 from app.models.auth_session import AuthSession
+from app.models.geocode_area_cache import GeocodeAreaCache
 from app.models.similarity_check import SimilarityCheck
 from app.models.user import User
+from app.services.s2cell import latlng_to_s2
 
 
 def create_user_headers(
@@ -60,6 +62,11 @@ def add_similarity_check(
     user_id,
     *,
     similarity,
+    home_prefecture="Tokyo",
+    home_city="Chiyoda",
+    home_district="Marunouchi",
+    home_lat=35.681236,
+    home_lng=139.767125,
     prefecture="Tokyo",
     city="Chiyoda",
     district="Marunouchi",
@@ -73,9 +80,11 @@ def add_similarity_check(
             SimilarityCheck(
                 user_id=user_id,
                 similarity=similarity,
-                home_prefecture="Tokyo",
-                home_city="Chiyoda",
-                home_district="Marunouchi",
+                home_prefecture=home_prefecture,
+                home_city=home_city,
+                home_district=home_district,
+                home_lat=home_lat,
+                home_lng=home_lng,
                 current_prefecture=prefecture,
                 current_city=city,
                 current_district=district,
@@ -129,6 +138,17 @@ def test_rankings_are_user_scoped_and_sorted_by_average_similarity(client):
         "Shinjuku",
         "Chiyoda",
     ]
+    assert body["items"][0]["area"] == body["items"][0]["current_area"]
+    assert body["items"][0]["home_area"] == {
+        "prefecture": "Tokyo",
+        "city": "Chiyoda",
+        "district": "Marunouchi",
+    }
+    assert body["items"][0]["current_area"] == {
+        "prefecture": "Tokyo",
+        "city": "Shinjuku",
+        "district": "Marunouchi",
+    }
     assert body["items"][0]["average_similarity"] == 0.9
     assert body["items"][0]["best_similarity"] == 0.9
     assert body["items"][0]["check_count"] == 1
@@ -167,6 +187,103 @@ def test_rankings_return_average_lat_lng(client):
     item = response.json()["items"][0]
     assert item["lat"] == 35.5
     assert item["lng"] == 139.5
+
+
+def test_rankings_group_by_home_and_current_area_pair(client):
+    user_id, headers = create_user_headers()
+
+    add_similarity_check(
+        user_id,
+        similarity=0.9,
+        home_prefecture="Saitama",
+        home_city="Yoshikawa",
+        home_district="Minamihiroshima",
+        city="Chiyoda",
+    )
+    add_similarity_check(
+        user_id,
+        similarity=0.7,
+        home_prefecture="Tokyo",
+        home_city="Setagaya",
+        home_district="Shimokitazawa",
+        city="Chiyoda",
+    )
+
+    response = client.get(
+        "/similarity/rankings?period=month",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    items = response.json()["items"]
+    assert [item["rank"] for item in items] == [1, 2]
+    assert [item["check_count"] for item in items] == [1, 1]
+    assert [item["current_area"]["city"] for item in items] == [
+        "Chiyoda",
+        "Chiyoda",
+    ]
+    assert [item["home_area"]["city"] for item in items] == [
+        "Yoshikawa",
+        "Setagaya",
+    ]
+    assert items[0]["area"] == items[0]["current_area"]
+
+
+def test_rankings_restore_empty_area_from_cache(client):
+    user_id, headers = create_user_headers()
+    lat = 35.681236
+    lng = 139.767125
+    key = latlng_to_s2(lat, lng)
+
+    add_similarity_check(
+        user_id,
+        similarity=0.8,
+        home_prefecture=None,
+        home_city=None,
+        home_district=None,
+        home_lat=lat,
+        home_lng=lng,
+        prefecture=None,
+        city=None,
+        district=None,
+        lat=lat,
+        lng=lng,
+    )
+
+    db = SessionLocal()
+    try:
+        db.add(
+            GeocodeAreaCache(
+                key=key,
+                s2_level12_id=key,
+                lat=lat,
+                lng=lng,
+                prefecture="Tokyo",
+                city="Chiyoda",
+                district="Marunouchi",
+                country_code="jp",
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.get(
+        "/similarity/rankings?period=month",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    item = response.json()["items"][0]
+    assert item["area"] == {
+        "prefecture": "Tokyo",
+        "city": "Chiyoda",
+        "district": "Marunouchi",
+    }
+    assert item["current_area"] == item["area"]
+    assert item["home_area"] == item["area"]
+    assert item["lat"] == lat
+    assert item["lng"] == lng
 
 
 def test_rankings_filter_by_period(client):

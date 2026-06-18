@@ -47,6 +47,16 @@ class SimilarityCheck(Base):
         nullable=True,
     )
 
+    home_lat = Column(
+        Float,
+        nullable=True,
+    )
+
+    home_lng = Column(
+        Float,
+        nullable=True,
+    )
+
     current_prefecture = Column(
         String,
         nullable=True,

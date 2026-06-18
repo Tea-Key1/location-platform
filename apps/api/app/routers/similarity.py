@@ -31,12 +31,10 @@ from app.schemas.similarity import (
     SimilaritySearchResponse,
 )
 
-from app.services.geocoder import (
-    GeocoderRateLimited,
-    GeocoderUnavailable,
-    reverse_geocode
-)
+from app.services.geocoder import reverse_geocode
 
+from app.services.area_resolver import is_in_japan_bbox
+from app.services.area_resolver import resolve_area
 from app.services.s2cell import latlng_to_s2
 
 from app.services.embedding_store import embedding_store
@@ -44,6 +42,7 @@ from app.services.embedding_store import embedding_store
 from app.services.similarity import (
     cosine_similarity,
     create_similarity_check,
+    get_similarity_retry_after_seconds,
     list_similarity_rankings,
 )
 
@@ -73,6 +72,36 @@ async def calculate_similarity(
 
     db: Session = Depends(get_db),
 ):
+    if not is_in_japan_bbox(body.home_lat, body.home_lng):
+        raise HTTPException(
+            status_code=422,
+            detail="home coordinate must be within Japan",
+        )
+
+    if not is_in_japan_bbox(body.current_lat, body.current_lng):
+        raise HTTPException(
+            status_code=422,
+            detail="current coordinate must be within Japan",
+        )
+
+    retry_after_seconds = get_similarity_retry_after_seconds(
+        db,
+        user_id=current_user.id,
+    )
+
+    if retry_after_seconds > 0:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "message": (
+                    "Similarity checks are limited to once every "
+                    "3 minutes."
+                ),
+                "retry_after_seconds": retry_after_seconds,
+                "retry_after": retry_after_seconds,
+            },
+            headers={"Retry-After": str(retry_after_seconds)},
+        )
 
     home_s2 = latlng_to_s2(
         body.home_lat,
@@ -96,26 +125,19 @@ async def calculate_similarity(
     else:
         similarity = max(0.0, min(1.0, similarity))
 
-    try:
-        home_area = reverse_geocode(
-            body.home_lat,
-            body.home_lng
-        )
+    home_area = resolve_area(
+        db,
+        lat=body.home_lat,
+        lng=body.home_lng,
+        reverse_geocode_func=reverse_geocode,
+    )
 
-        current_area = reverse_geocode(
-            body.current_lat,
-            body.current_lng
-        )
-    except GeocoderRateLimited as exc:
-        raise HTTPException(
-            status_code=429,
-            detail=str(exc),
-        )
-    except GeocoderUnavailable as exc:
-        raise HTTPException(
-            status_code=503,
-            detail=str(exc),
-        )
+    current_area = resolve_area(
+        db,
+        lat=body.current_lat,
+        lng=body.current_lng,
+        reverse_geocode_func=reverse_geocode,
+    )
 
     create_similarity_check(
         db,
@@ -123,6 +145,8 @@ async def calculate_similarity(
         similarity=similarity,
         home_area=home_area,
         current_area=current_area,
+        home_lat=body.home_lat,
+        home_lng=body.home_lng,
         current_lat=body.current_lat,
         current_lng=body.current_lng,
         current_s2_id=current_s2,

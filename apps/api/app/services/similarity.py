@@ -1,4 +1,5 @@
 import numpy as np
+from math import ceil
 from datetime import timedelta
 from datetime import timezone
 
@@ -6,7 +7,9 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.security import utc_now
+from app.models.geocode_area_cache import GeocodeAreaCache
 from app.models.similarity_check import SimilarityCheck
+from app.services.s2cell import latlng_to_s2
 
 
 def cosine_similarity(a, b):
@@ -39,6 +42,8 @@ PERIOD_DAYS = {
     "year": 365,
 }
 
+SIMILARITY_CHECK_COOLDOWN_SECONDS = 3 * 60
+
 
 def _area_value(area, key):
     if not area:
@@ -58,6 +63,27 @@ def _iso_z(value):
     )
 
 
+def _ranking_area_from_cache(db: Session, lat, lng):
+    if lat is None or lng is None:
+        return None
+
+    key = latlng_to_s2(float(lat), float(lng))
+    cache = (
+        db.query(GeocodeAreaCache)
+        .filter(GeocodeAreaCache.key == key)
+        .one_or_none()
+    )
+
+    if cache is None:
+        return None
+
+    return {
+        "prefecture": cache.prefecture,
+        "city": cache.city,
+        "district": cache.district,
+    }
+
+
 def create_similarity_check(
     db: Session,
     *,
@@ -65,6 +91,8 @@ def create_similarity_check(
     similarity: float,
     home_area: dict,
     current_area: dict,
+    home_lat: float,
+    home_lng: float,
     current_lat: float,
     current_lng: float,
     current_s2_id: str,
@@ -76,6 +104,8 @@ def create_similarity_check(
         home_prefecture=_area_value(home_area, "prefecture"),
         home_city=_area_value(home_area, "city"),
         home_district=_area_value(home_area, "district"),
+        home_lat=home_lat,
+        home_lng=home_lng,
         current_prefecture=_area_value(current_area, "prefecture"),
         current_city=_area_value(current_area, "city"),
         current_district=_area_value(current_area, "district"),
@@ -96,6 +126,29 @@ def create_similarity_check(
     return check
 
 
+def get_similarity_retry_after_seconds(
+    db: Session,
+    *,
+    user_id: int,
+) -> int:
+    latest_checked_at = (
+        db.query(func.max(SimilarityCheck.checked_at))
+        .filter(SimilarityCheck.user_id == user_id)
+        .scalar()
+    )
+
+    if latest_checked_at is None:
+        return 0
+
+    elapsed = (utc_now() - latest_checked_at).total_seconds()
+    retry_after = SIMILARITY_CHECK_COOLDOWN_SECONDS - elapsed
+
+    if retry_after <= 0:
+        return 0
+
+    return max(1, ceil(retry_after))
+
+
 def list_similarity_rankings(
     db: Session,
     *,
@@ -106,9 +159,14 @@ def list_similarity_rankings(
 
     rows = (
         db.query(
-            SimilarityCheck.current_prefecture.label("prefecture"),
-            SimilarityCheck.current_city.label("city"),
-            SimilarityCheck.current_district.label("district"),
+            SimilarityCheck.home_prefecture.label("home_prefecture"),
+            SimilarityCheck.home_city.label("home_city"),
+            SimilarityCheck.home_district.label("home_district"),
+            SimilarityCheck.current_prefecture.label("current_prefecture"),
+            SimilarityCheck.current_city.label("current_city"),
+            SimilarityCheck.current_district.label("current_district"),
+            func.avg(SimilarityCheck.home_lat).label("home_lat"),
+            func.avg(SimilarityCheck.home_lng).label("home_lng"),
             func.avg(SimilarityCheck.current_lat).label("lat"),
             func.avg(SimilarityCheck.current_lng).label("lng"),
             func.avg(SimilarityCheck.similarity).label("average_similarity"),
@@ -119,6 +177,9 @@ def list_similarity_rankings(
         .filter(SimilarityCheck.user_id == user_id)
         .filter(SimilarityCheck.checked_at >= cutoff)
         .group_by(
+            SimilarityCheck.home_prefecture,
+            SimilarityCheck.home_city,
+            SimilarityCheck.home_district,
             SimilarityCheck.current_prefecture,
             SimilarityCheck.current_city,
             SimilarityCheck.current_district,
@@ -143,14 +204,35 @@ def list_similarity_rankings(
             else max(0.0, min(1.0, float(row.best_similarity)))
         )
 
+        home_area = {
+            "prefecture": row.home_prefecture,
+            "city": row.home_city,
+            "district": row.home_district,
+        }
+        current_area = {
+            "prefecture": row.current_prefecture,
+            "city": row.current_city,
+            "district": row.current_district,
+        }
+
+        if not any(home_area.values()):
+            home_area = (
+                _ranking_area_from_cache(db, row.home_lat, row.home_lng)
+                or home_area
+            )
+
+        if not any(current_area.values()):
+            current_area = (
+                _ranking_area_from_cache(db, row.lat, row.lng)
+                or current_area
+            )
+
         items.append(
             {
                 "rank": index,
-                "area": {
-                    "prefecture": row.prefecture,
-                    "city": row.city,
-                    "district": row.district,
-                },
+                "area": current_area,
+                "home_area": home_area,
+                "current_area": current_area,
                 "lat": None if row.lat is None else float(row.lat),
                 "lng": None if row.lng is None else float(row.lng),
                 "average_similarity": average_similarity,

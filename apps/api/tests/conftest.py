@@ -19,6 +19,7 @@ os.environ.setdefault("DATABASE_URL", "sqlite:///C:/tmp/roamie-test.db")
 from app.db.database import Base, engine
 from app.main import app
 from app.models.auth_session import AuthSession
+from app.models.geocode_area_cache import GeocodeAreaCache
 from app.models.location import Location
 from app.models.profile import Profile
 from app.models.user import User

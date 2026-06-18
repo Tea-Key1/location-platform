@@ -7,6 +7,7 @@ from sqlalchemy import pool
 from app.core.config import DATABASE_URL
 from app.db.database import Base
 from app.models.auth_session import AuthSession
+from app.models.geocode_area_cache import GeocodeAreaCache
 from app.models.location import Location
 from app.models.profile import Profile
 from app.models.similarity_check import SimilarityCheck
